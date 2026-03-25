@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Node
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env
+.env
+backend/.env
+frontend/.env
+frontend/.env.local
+frontend/.env.production.local
+
+# Databases and runtime data
+backend/expense_saas.db
+*.db
+logs/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Temporary project artifacts
+tmp_receipt_ocr/
+tmp_receipt_ocr.zip
+temp_compensation_test.json
+temp_tax_test.json
+tools/
+data/laws/
+data/faiss_index/
+data/laws_manifest.json
+
+# Build output
+frontend/dist/

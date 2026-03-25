@@ -1,0 +1,419 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trợ lý AI Nội bộ</title>
+  <style>
+    :root {
+      --bg: #f4efe6;
+      --panel: #fffaf2;
+      --line: #d7c8b4;
+      --ink: #1f2933;
+      --muted: #6b7280;
+      --accent: #0f766e;
+      --accent-dark: #115e59;
+      --user: #d9f3ee;
+      --bot: #fff;
+      --danger: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(180deg, #efe7da 0%, #f7f3ec 100%);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 18px;
+      padding: 20px;
+    }
+    .sidebar, .chat-shell {
+      background: rgba(255, 250, 242, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: 0 18px 60px rgba(58, 44, 23, 0.08);
+      backdrop-filter: blur(6px);
+    }
+    .sidebar {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .brand {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 16px;
+    }
+    .brand h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+    }
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .section-title {
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .quick-list {
+      display: grid;
+      gap: 10px;
+    }
+    .quick-btn, .ghost-btn, .send-btn {
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: 0.18s ease;
+      font: inherit;
+    }
+    .quick-btn, .ghost-btn {
+      text-align: left;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+    }
+    .quick-btn:hover, .ghost-btn:hover {
+      transform: translateY(-1px);
+      border-color: var(--accent);
+    }
+    .status-list {
+      display: grid;
+      gap: 10px;
+    }
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #d1d5db;
+    }
+    .dot.ok { background: #15803d; }
+    .dot.bad { background: var(--danger); }
+    .chat-shell {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: calc(100vh - 40px);
+    }
+    .chat-head {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(135deg, rgba(15,118,110,0.12), rgba(255,255,255,0.25));
+    }
+    .chat-head strong { font-size: 18px; }
+    .intent {
+      font-size: 12px;
+      background: rgba(15,118,110,0.12);
+      color: var(--accent-dark);
+      border: 1px solid rgba(15,118,110,0.2);
+      padding: 6px 10px;
+      border-radius: 999px;
+      min-width: 74px;
+      text-align: center;
+    }
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .welcome {
+      background: linear-gradient(135deg, rgba(15,118,110,0.10), rgba(255,255,255,0.7));
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 24px;
+      line-height: 1.7;
+    }
+    .message {
+      max-width: 78%;
+      padding: 14px 16px;
+      border-radius: 18px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      border: 1px solid var(--line);
+    }
+    .message.user {
+      align-self: flex-end;
+      background: var(--user);
+    }
+    .message.bot {
+      align-self: flex-start;
+      background: var(--bot);
+    }
+    .message code, .message pre {
+      font-family: Consolas, monospace;
+      background: #f2f4f7;
+      border-radius: 10px;
+    }
+    .message code { padding: 2px 6px; }
+    .message pre {
+      padding: 12px;
+      overflow-x: auto;
+    }
+    .composer {
+      border-top: 1px solid var(--line);
+      padding: 18px 22px 22px;
+      background: rgba(255,255,255,0.55);
+    }
+    .composer-box {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+    textarea {
+      width: 100%;
+      resize: none;
+      min-height: 58px;
+      max-height: 180px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 14px 16px;
+      font: inherit;
+      color: var(--ink);
+      outline: none;
+    }
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(15,118,110,0.08);
+    }
+    .send-btn {
+      min-width: 120px;
+      height: 52px;
+      padding: 0 18px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+    .send-btn:hover { background: var(--accent-dark); }
+    .send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .hint {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    @media (max-width: 880px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { order: 2; }
+      .chat-shell { min-height: 70vh; }
+      .message { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Trợ lý AI nội bộ</h1>
+        <p>Tra cứu pháp luật, sinh SQL an toàn, chạy báo cáo và tự động hóa trên máy local.</p>
+      </div>
+
+      <button class="ghost-btn" onclick="resetChat()">Cuộc trò chuyện mới</button>
+
+      <p class="section-title">Câu hỏi mẫu</p>
+      <div class="quick-list">
+        <button class="quick-btn" onclick="sendQuick('Luật thuế TNCN mới nhất là gì?')">Pháp luật: Thuế TNCN</button>
+        <button class="quick-btn" onclick="sendQuick('Cho tôi tồn kho hiện tại')">SQL: Tồn kho hiện tại</button>
+        <button class="quick-btn" onclick="sendQuick('Tự động gửi báo cáo mỗi ngày lúc 8h')">Automation: Báo cáo 8h</button>
+        <button class="quick-btn" onclick="sendQuick('Xin chào')">Chat: Xin chào</button>
+      </div>
+
+      <p class="section-title">Trạng thái</p>
+      <div class="status-list">
+        <div class="status-item"><span id="dot-ollama" class="dot"></span><span id="text-ollama">Ollama</span></div>
+        <div class="status-item"><span id="dot-faiss" class="dot"></span><span id="text-faiss">FAISS</span></div>
+        <div class="status-item"><span id="dot-sql" class="dot"></span><span id="text-sql">SQL Server</span></div>
+        <div class="status-item"><span id="dot-telegram" class="dot"></span><span id="text-telegram">Telegram</span></div>
+      </div>
+    </aside>
+
+    <section class="chat-shell">
+      <div class="chat-head">
+        <div>
+          <strong>Trợ lý offline</strong>
+          <div style="font-size: 13px; color: var(--muted); margin-top: 4px;">Ollama + FAISS + SQL Server + APScheduler</div>
+        </div>
+        <div id="intent-badge" class="intent">SẴN SÀNG</div>
+      </div>
+
+      <div id="messages" class="messages">
+        <div class="welcome">
+          <strong>Hệ thống có thể xử lý:</strong>
+          <div>1. Câu hỏi pháp luật Việt Nam bằng RAG từ tài liệu trong <code>data/laws</code>.</div>
+          <div>2. Câu hỏi dữ liệu bằng tiếng Việt và sinh SQL <code>SELECT</code> an toàn.</div>
+          <div>3. Lên lịch báo cáo, kiểm tra bất thường và gửi thông báo tùy chọn.</div>
+        </div>
+      </div>
+
+      <div class="composer">
+        <div class="composer-box">
+          <textarea id="message-input" placeholder="Nhập câu hỏi bằng tiếng Việt..."></textarea>
+          <button id="send-btn" class="send-btn" onclick="sendMessage()">Gửi</button>
+        </div>
+        <div class="hint">
+          <span>Enter để gửi, Shift+Enter để xuống dòng</span>
+          <span id="char-count">0 / 2000</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    const charCountEl = document.getElementById('char-count');
+    const intentBadgeEl = document.getElementById('intent-badge');
+    let loading = false;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      inputEl.focus();
+      checkStatus();
+      setInterval(checkStatus, 30000);
+    });
+
+    inputEl.addEventListener('input', () => {
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 180) + 'px';
+      charCountEl.textContent = `${inputEl.value.length} / 2000`;
+    });
+
+    inputEl.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    async function sendMessage() {
+      const message = inputEl.value.trim();
+      if (!message || loading) return;
+
+      appendMessage('user', message);
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+      charCountEl.textContent = '0 / 2000';
+      setLoading(true);
+      const typingEl = appendMessage('bot', 'Đang xử lý...');
+
+      try {
+        const response = await fetch(`${API_BASE}/ask`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        const data = await response.json();
+        typingEl.remove();
+        if (!response.ok) {
+          throw new Error(data.detail || `HTTP ${response.status}`);
+        }
+        appendMessage('bot', data.answer);
+        intentBadgeEl.textContent = data.intent || 'XONG';
+      } catch (error) {
+        typingEl.remove();
+        appendMessage('bot', `Không thể kết nối tới server: ${error.message}`);
+        intentBadgeEl.textContent = 'LỖI';
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function sendQuick(text) {
+      inputEl.value = text;
+      charCountEl.textContent = `${text.length} / 2000`;
+      sendMessage();
+    }
+
+    function appendMessage(role, text) {
+      const el = document.createElement('div');
+      el.className = `message ${role}`;
+      el.innerHTML = formatMessage(text);
+      messagesEl.appendChild(el);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return el;
+    }
+
+    function formatMessage(text) {
+      let safe = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      safe = safe.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
+      safe = safe.replace(/`([^`]+)`/g, '<code>$1</code>');
+      safe = safe.replace(/\n/g, '<br>');
+      return safe;
+    }
+
+    function setLoading(value) {
+      loading = value;
+      sendBtn.disabled = value;
+      inputEl.disabled = value;
+    }
+
+    function resetChat() {
+      messagesEl.innerHTML = `
+        <div class="welcome">
+          <strong>Bạn có thể hỏi:</strong>
+          <div>- Luật thuế, lao động, BHXH...</div>
+          <div>- Tồn kho, doanh thu, đơn hàng...</div>
+          <div>- Tự động gửi báo cáo mỗi ngày lúc 8h</div>
+        </div>`;
+      intentBadgeEl.textContent = 'SẴN SÀNG';
+      inputEl.focus();
+    }
+
+    async function checkStatus() {
+      try {
+        const response = await fetch(`${API_BASE}/status`);
+        const data = await response.json();
+        if (!response.ok) throw new Error('status failed');
+        setStatus('ollama', data.ollama_available, data.ollama_available ? 'Ollama: sẵn sàng' : 'Ollama: offline');
+        setStatus('faiss', data.faiss_ready, data.faiss_ready ? `FAISS: ${data.faiss_vector_count} vectors` : 'FAISS: chưa nạp dữ liệu');
+        setStatus('sql', data.sql_available, data.sql_available ? 'SQL Server: đã kết nối' : 'SQL Server: chưa cấu hình');
+        setStatus('telegram', data.telegram_configured, data.telegram_configured ? 'Telegram: đã bật' : 'Telegram: đang tắt');
+      } catch (_error) {
+        setStatus('ollama', false, 'Server: offline');
+        setStatus('faiss', false, 'FAISS: không khả dụng');
+        setStatus('sql', false, 'SQL Server: không khả dụng');
+        setStatus('telegram', false, 'Telegram: không khả dụng');
+      }
+    }
+
+    function setStatus(name, ok, label) {
+      const dot = document.getElementById(`dot-${name}`);
+      const text = document.getElementById(`text-${name}`);
+      dot.className = `dot ${ok ? 'ok' : 'bad'}`;
+      text.textContent = label;
+    }
+  </script>
+</body>
+</html>
