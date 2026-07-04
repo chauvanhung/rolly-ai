@@ -1,0 +1,65 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-serif: "Outfit", "Segoe UI", sans-serif;
+  --font-sans: "Be Vietnam Pro", "Segoe UI", sans-serif;
+  
+  /* Crimson/Ruby brand palette */
+  --color-brand-50: #fff5f5;
+  --color-brand-100: #ffebeb;
+  --color-brand-200: #ffd4d4;
+  --color-brand-300: #ffb0b0;
+  --color-brand-400: #ff7d7d;
+  --color-brand-500: #f84c4c;
+  --color-brand-600: #e02424;
+  --color-brand-700: #b91c1c;
+  --color-brand-800: #991b1b;
+  --color-brand-900: #7f1d1d;
+  --color-brand-950: #450a0a;
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  overflow-y: scroll;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Glassmorphism panel */
+.glass-header {
+  background-color: rgba(250, 249, 246, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass-header {
+  background-color: rgba(28, 25, 23, 0.75);
+}
+
+/* Base custom selection highlight */
+::selection {
+  background-color: var(--color-brand-200);
+  color: var(--color-brand-900);
+}
+
+.dark ::selection {
+  background-color: var(--color-brand-900);
+  color: var(--color-brand-100);
+}

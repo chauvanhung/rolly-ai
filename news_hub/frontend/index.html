@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tin Nóng - Cổng tổng hợp tin tức thông minh 24/7</title>
+    <meta name="description" content="Cập nhật tin tức nóng hổi, tin công nghệ, kinh tế, đời sống mới nhất từ các nguồn báo chí chính thống Việt Nam, cập nhật liên tục mỗi 5 phút." />
+    <script>
+      if (
+        localStorage.getItem('theme') === 'dark' ||
+        (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+  </head>
+  <body class="bg-[#faf9f6] text-stone-900 dark:bg-stone-950 dark:text-stone-100 transition-colors duration-300">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
