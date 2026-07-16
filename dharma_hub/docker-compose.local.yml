@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dharma_user
+      POSTGRES_PASSWORD: dharma_password
+      POSTGRES_DB: dharma_hub
+    volumes:
+      - dharma_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dharma_user -d dharma_hub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      APP_NAME: phatgiao
+      DATABASE_URL: postgresql+psycopg2://dharma_user:dharma_password@postgres:5432/dharma_hub
+      JWT_SECRET: change-me-phatgiao-local
+      UPLOAD_DIR: /app/uploads
+      CORS_ORIGINS: "*"
+    volumes:
+      - dharma_uploads:/app/uploads
+    ports:
+      - "8015:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    ports:
+      - "3015:3000"
+    environment:
+      BACKEND_URL: http://backend:8000/api/v1/:path*
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ | grep -q '<html'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  dharma_pgdata:
+  dharma_uploads:
+

@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+:root {
+  --background: #faf8f5;
+  --foreground: #2d2a26;
+  --card: #ffffff;
+  --card-foreground: #2d2a26;
+  --primary: #d49c2a;
+  --primary-foreground: #ffffff;
+  --secondary: #5c4017;
+  --secondary-foreground: #faf8f5;
+  --accent: #8f2a24;
+  --accent-foreground: #ffffff;
+  --calm: #2f4f3f;
+  --calm-foreground: #ffffff;
+  --muted: #6e6459;
+  --muted-foreground: #9a8f82;
+  --border: #e6dfd3;
+}
+
+.dark {
+  --background: #191714;
+  --foreground: #ebe7e0;
+  --card: #24211d;
+  --card-foreground: #ebe7e0;
+  --primary: #d49c2a;
+  --primary-foreground: #191714;
+  --secondary: #a68352;
+  --secondary-foreground: #191714;
+  --accent: #ba4740;
+  --accent-foreground: #ffffff;
+  --calm: #3e6853;
+  --calm-foreground: #ffffff;
+  --muted: #a49788;
+  --muted-foreground: #6e6459;
+  --border: #38332c;
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-calm: var(--calm);
+  --color-calm-foreground: var(--calm-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+
+  --font-sans: var(--font-sans-family), system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-serif-family), Georgia, "Times New Roman", serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  line-height: 1.65;
+  font-size: var(--app-font-size, 16px);
+}
+
+/* Typography styles for Sutra/Dharma talk reading */
+.reading-content {
+  font-family: var(--font-sans);
+  text-align: justify;
+}
+.reading-content p {
+  margin-bottom: 1.5rem;
+}
+
+/* Form Styles */
+input,
+select,
+textarea {
+  border: 1px solid var(--border);
+  background-color: var(--card);
+  color: var(--foreground);
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-size: 0.9375rem;
+  min-height: 2.75rem;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+textarea {
+  min-height: 6rem;
+}
+
+/* Table styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th {
+  background-color: rgba(0, 0, 0, 0.02);
+  border-bottom: 2px solid var(--border);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.dark th {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.925rem;
+}
+
+/* Animation utilities */
+.fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.25s ease-out forwards;
+}
+
+/* Focus mode: hide chrome when reading */
+body.focus-mode-active nav,
+body.focus-mode-active footer {
+  display: none !important;
+}
+
+/* Screen-reader only utility (if Tailwind doesn't ship sr-only in all builds) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
