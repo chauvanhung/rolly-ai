@@ -1,7 +1,176 @@
-{$DOMAIN} {
+(shared_security_headers) {
+  header {
+    -Server
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    X-Permitted-Cross-Domain-Policies "none"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    Origin-Agent-Cluster "?1"
+    Cross-Origin-Opener-Policy "same-origin-allow-popups"
+    Cross-Origin-Resource-Policy "same-site"
+  }
+}
+
+(app_csp) {
+  header {
+    Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' data: https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://cdn.jsdelivr.net; connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://app.rollyhub.com https://calendar.rollyhub.com https://eat.rollyhub.com ws: wss:; frame-src 'self' https://accounts.google.com; form-action 'self' https://accounts.google.com; manifest-src 'self'; worker-src 'self' blob:"
+  }
+}
+
+(calendar_csp) {
+  header {
+    Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://calendar.rollyhub.com https://app.rollyhub.com wss: ws:; frame-src 'self' https://accounts.google.com; form-action 'self' https://accounts.google.com; manifest-src 'self'; worker-src 'self' blob:"
+  }
+}
+
+(news_csp) {
+  header {
+    Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'self' https://news.rollyhub.com; form-action 'self'; manifest-src 'self'; worker-src 'self' blob:"
+  }
+}
+
+(route_csp) {
+  header {
+    Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'self' https://route.rollyhub.com; form-action 'self'; manifest-src 'self'; worker-src 'self' blob:"
+  }
+}
+
+(eat_csp) {
+  header {
+    Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; connect-src 'self' https://eat.rollyhub.com https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com ws: wss:; frame-src 'self' https://accounts.google.com; form-action 'self' https://accounts.google.com; manifest-src 'self'; worker-src 'self' blob:"
+  }
+}
+(phatgiao_csp) {
+  header {
+    Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'self' https://phatgiao.rollyhub.com ws: wss:; frame-src 'self' https://maps.google.com https://www.google.com; form-action 'self'; manifest-src 'self'; worker-src 'self' blob:"
+  }
+}
+
+
+http://phatgiao.rollyhub.com {
   encode gzip zstd
+  import shared_security_headers
+  import phatgiao_csp
 
   handle /api/* {
+    reverse_proxy host.docker.internal:8015
+  }
+
+  handle /health {
+    reverse_proxy host.docker.internal:8015
+  }
+
+  handle {
+    reverse_proxy host.docker.internal:3015
+  }
+}
+http://eat.rollyhub.com {
+  encode gzip zstd
+  import shared_security_headers
+  import eat_csp
+
+  handle /api/v1/* {
+    reverse_proxy host.docker.internal:8021
+  }
+
+  handle /uploads/* {
+    reverse_proxy host.docker.internal:8021
+  }
+
+  handle /health {
+    reverse_proxy host.docker.internal:8021
+  }
+
+  handle {
+    reverse_proxy host.docker.internal:3021
+  }
+}
+
+http://news.rollyhub.com {
+  encode gzip zstd
+  import shared_security_headers
+  import news_csp
+
+  handle /api/* {
+    reverse_proxy host.docker.internal:8031
+  }
+
+  handle /health {
+    reverse_proxy host.docker.internal:8031
+  }
+
+  handle {
+    reverse_proxy host.docker.internal:3031
+  }
+}
+
+http://route.rollyhub.com {
+  encode gzip zstd
+  import shared_security_headers
+  import route_csp
+
+  handle /api/* {
+    reverse_proxy host.docker.internal:8032
+  }
+
+  handle /health {
+    reverse_proxy host.docker.internal:8032
+  }
+
+  handle {
+    reverse_proxy host.docker.internal:3032
+  }
+}
+
+http://calendar.rollyhub.com {
+  encode gzip zstd
+  import shared_security_headers
+  import calendar_csp
+
+  handle /api/* {
+    reverse_proxy backend:8000
+  }
+
+  handle /health {
+    reverse_proxy calendar_frontend:80
+  }
+
+  handle {
+    reverse_proxy calendar_frontend:80
+  }
+}
+
+# Cấu hình mặc định cho app.rollyhub.com, localhost, và IP trực tiếp
+:80 {
+  encode gzip zstd
+  import shared_security_headers
+  import app_csp
+
+  handle /api {
+    reverse_proxy backend:8000
+  }
+
+  handle /api/* {
+    reverse_proxy backend:8000
+  }
+
+  handle /docs {
+    reverse_proxy backend:8000
+  }
+
+  handle /docs/* {
+    reverse_proxy backend:8000
+  }
+
+  handle /redoc {
+    reverse_proxy backend:8000
+  }
+
+  handle /redoc/* {
+    reverse_proxy backend:8000
+  }
+
+  handle /openapi.json {
     reverse_proxy backend:8000
   }
 
@@ -9,7 +178,26 @@
     reverse_proxy backend:8000
   }
 
+  handle /lingua-api/* {
+    uri replace /lingua-api /api
+    reverse_proxy host.docker.internal:8011
+  }
+
+  handle /lingua-uploads/* {
+    uri replace /lingua-uploads /uploads
+    reverse_proxy host.docker.internal:8011
+  }
+
+  handle /lingua {
+    reverse_proxy host.docker.internal:3011
+  }
+
+  handle /lingua/* {
+    reverse_proxy host.docker.internal:3011
+  }
+
   handle {
     reverse_proxy frontend:80
   }
 }
+
