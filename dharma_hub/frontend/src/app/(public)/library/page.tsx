@@ -7,6 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
 import { PageLoading } from "@/components/ui/Skeleton";
 import MediaPlaceholder from "@/components/ui/MediaPlaceholder";
+import AudioPlayer from "@/components/AudioPlayer";
 
 export default function LibraryPage() {
   const [assets, setAssets] = useState<any[]>([]);
@@ -14,6 +15,8 @@ export default function LibraryPage() {
   const [error, setError] = useState("");
   const [selectedKind, setSelectedKind] = useState<string>("");
   const [activeImage, setActiveImage] = useState<any | null>(null);
+  /** id file audio đang mở nghe trực tiếp trên trang */
+  const [playingId, setPlayingId] = useState<number | null>(null);
 
   const loadMedia = useCallback(async () => {
     setLoading(true);
@@ -136,48 +139,88 @@ export default function LibraryPage() {
         </div>
       ) : (
         <div className="bg-card border border-border rounded-xl shadow-sm divide-y divide-border overflow-hidden">
-          {assets.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between p-4 hover:bg-border/5 transition-colors gap-3"
-            >
-              <div className="flex items-center space-x-3.5 min-w-0">
-                <span className="p-2.5 bg-background rounded-lg border border-border shrink-0">
-                  {getFileIcon(item.kind)}
-                </span>
-                <div className="min-w-0">
-                  <h4 className="text-sm font-bold text-foreground truncate max-w-md">
-                    {item.title || item.file_name}
-                  </h4>
-                  <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
-                    Dung lượng: {formatSize(item.size_bytes)}
-                    {item.folder ? ` | Thư mục: ${item.folder}` : ""}
-                  </p>
-                </div>
-              </div>
+          {assets.map((item) => {
+            const isAudio = item.kind === "audio" || /\.mp3($|\?)/i.test(item.url || item.file_name || "");
+            const isOpen = playingId === item.id;
+            return (
+              <div key={item.id} className="hover:bg-border/5 transition-colors">
+                <div className="flex items-center justify-between p-4 gap-3">
+                  <div className="flex items-center space-x-3.5 min-w-0">
+                    <span className="p-2.5 bg-background rounded-lg border border-border shrink-0">
+                      {getFileIcon(item.kind)}
+                    </span>
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-bold text-foreground truncate max-w-md">
+                        {item.title || item.file_name}
+                      </h4>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
+                        Dung lượng: {formatSize(item.size_bytes)}
+                        {item.folder ? ` | Thư mục: ${item.folder}` : ""}
+                      </p>
+                    </div>
+                  </div>
 
-              {item.kind === "image" ? (
-                <button
-                  type="button"
-                  onClick={() => setActiveImage(item)}
-                  className="flex items-center space-x-1 border border-border bg-background hover:text-foreground text-muted px-3 py-2 rounded-full text-xs font-semibold hover:bg-muted-foreground/10 transition-colors min-h-10 shrink-0"
-                >
-                  Xem
-                </button>
-              ) : (
-                <a
-                  href={resolveUrl(item.url)}
-                  download
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center space-x-1 border border-border bg-background hover:text-foreground text-muted px-3 py-2 rounded-full text-xs font-semibold hover:bg-muted-foreground/10 transition-colors min-h-10 shrink-0"
-                >
-                  <Download size={13} aria-hidden />
-                  <span>Tải về</span>
-                </a>
-              )}
-            </div>
-          ))}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {item.kind === "image" ? (
+                      <button
+                        type="button"
+                        onClick={() => setActiveImage(item)}
+                        className="flex items-center space-x-1 border border-border bg-background hover:text-foreground text-muted px-3 py-2 rounded-full text-xs font-semibold hover:bg-muted-foreground/10 transition-colors min-h-10"
+                      >
+                        Xem
+                      </button>
+                    ) : isAudio ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setPlayingId(isOpen ? null : item.id)}
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold min-h-10 transition-colors ${
+                            isOpen
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border bg-background text-muted hover:text-foreground hover:bg-muted-foreground/10"
+                          }`}
+                        >
+                          <Headphones size={13} aria-hidden />
+                          {isOpen ? "Thu gọn" : "Nghe ngay"}
+                        </button>
+                        <a
+                          href={resolveUrl(item.url)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-2 text-xs font-semibold text-muted hover:text-foreground min-h-10"
+                          title="Mở / tải file"
+                        >
+                          <Download size={13} aria-hidden />
+                          <span className="hidden sm:inline">Tải</span>
+                        </a>
+                      </>
+                    ) : (
+                      <a
+                        href={resolveUrl(item.url)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center space-x-1 border border-border bg-background hover:text-foreground text-muted px-3 py-2 rounded-full text-xs font-semibold hover:bg-muted-foreground/10 transition-colors min-h-10"
+                      >
+                        <Download size={13} aria-hidden />
+                        <span>{item.kind === "pdf" ? "Mở PDF" : "Tải về"}</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Player nhúng — nghe trực tiếp, không bắt tải về */}
+                {isAudio && isOpen && item.url && (
+                  <div className="px-4 pb-4">
+                    <AudioPlayer
+                      src={resolveUrl(item.url)}
+                      title={item.title || item.file_name || "Pháp thoại"}
+                      speaker="Thư viện Pháp bảo"
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

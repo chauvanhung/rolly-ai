@@ -31,7 +31,7 @@ export default function AccountPage() {
       try {
         const [bmRes, progRes, regRes] = await Promise.all([
           api("/user/bookmarks"),
-          api("/user/progress"),
+          api("/user/progress/reading"),
           api("/user/retreats"),
         ]);
         setBookmarks(bmRes || []);
@@ -126,20 +126,34 @@ export default function AccountPage() {
             ) : (
               <div className="space-y-3">
                 {bookmarks.map((bm) => {
+                  const details = bm.item_details || {};
                   const isSutra = bm.item_type === "sutra";
-                  const link = isSutra ? `/sutras/${bm.sutra_slug}` : `/articles/${bm.dharma_talk_slug}`;
+                  const isLecture = bm.item_type === "lecture";
+                  const slug = details.slug;
+                  const link = !slug
+                    ? "#"
+                    : isSutra
+                    ? `/sutras/${slug}`
+                    : isLecture
+                    ? `/lectures/${slug}`
+                    : `/articles/${slug}`;
+                  const typeLabel = isSutra ? "Kinh điển" : isLecture ? "Bài giảng" : "Bài pháp";
                   return (
                     <div key={bm.id} className="flex justify-between items-center text-xs p-2 hover:bg-border/5 rounded transition-colors">
                       <div className="min-w-0 flex-1">
                         <span className="text-[10px] text-primary font-bold uppercase tracking-wider block font-mono">
-                          {isSutra ? "Kinh điển" : "Bài pháp"}
+                          {typeLabel}
                         </span>
-                        <h4 className="font-semibold text-foreground truncate mt-0.5">{bm.title}</h4>
+                        <h4 className="font-semibold text-foreground truncate mt-0.5">
+                          {details.title || `Mục #${bm.item_id}`}
+                        </h4>
                       </div>
-                      <Link href={link} className="flex items-center text-primary font-bold hover:underline shrink-0 pl-4">
-                        <span>Đọc tiếp</span>
-                        <ArrowRight size={13} className="ml-0.5" />
-                      </Link>
+                      {slug ? (
+                        <Link href={link} className="flex items-center text-primary font-bold hover:underline shrink-0 pl-4">
+                          <span>Đọc tiếp</span>
+                          <ArrowRight size={13} className="ml-0.5" />
+                        </Link>
+                      ) : null}
                     </div>
                   );
                 })}

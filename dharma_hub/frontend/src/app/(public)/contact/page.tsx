@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Mail, Phone, Clock, MapPin, Loader2, Send } from "lucide-react";
 import { api } from "@/services/api";
 import PageHeader from "@/components/ui/PageHeader";
+import { siteConfig, displayOrPlaceholder } from "@/config/site";
 
 export default function ContactPage() {
   const [fullName, setFullName] = useState("");
@@ -16,6 +17,12 @@ export default function ContactPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [message, setMessage] = useState("");
+
+  const templeName = displayOrPlaceholder(siteConfig.templeName, "Đạo tràng");
+  const address = displayOrPlaceholder(siteConfig.address);
+  const phoneDisplay = displayOrPlaceholder(siteConfig.phone);
+  const emailDisplay = displayOrPlaceholder(siteConfig.email);
+  const openHours = displayOrPlaceholder(siteConfig.openHours);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,50 +71,68 @@ export default function ContactPage() {
             <h2 className="font-serif text-lg font-bold text-foreground border-b border-border/40 pb-3">
               Thông tin liên lạc
             </h2>
+            <p className="text-sm font-serif font-semibold text-foreground">{templeName}</p>
 
             <ul className="space-y-4 text-sm text-muted">
               <li className="flex items-start space-x-3">
                 <MapPin className="text-primary shrink-0 mt-0.5" size={20} aria-hidden />
-                <span>299 Lương Định Của, Phường An Khánh, TP. Thủ Đức, TP. Hồ Chí Minh</span>
+                <span className={!siteConfig.address ? "italic opacity-70" : undefined}>{address}</span>
               </li>
               <li className="flex items-center space-x-3">
                 <Phone className="text-primary shrink-0" size={20} aria-hidden />
-                <a href="tel:+842837403388" className="hover:text-primary transition-colors">
-                  028 3740 3388
-                </a>
+                {siteConfig.phoneTel ? (
+                  <a href={`tel:${siteConfig.phoneTel}`} className="hover:text-primary transition-colors">
+                    {phoneDisplay}
+                  </a>
+                ) : (
+                  <span className={!siteConfig.phone ? "italic opacity-70" : undefined}>{phoneDisplay}</span>
+                )}
               </li>
               <li className="flex items-center space-x-3">
                 <Mail className="text-primary shrink-0" size={20} aria-hidden />
-                <a href="mailto:lienhe@phatgiao.rollyhub.com" className="hover:text-primary transition-colors">
-                  lienhe@phatgiao.rollyhub.com
-                </a>
+                {siteConfig.email ? (
+                  <a href={`mailto:${siteConfig.email}`} className="hover:text-primary transition-colors">
+                    {emailDisplay}
+                  </a>
+                ) : (
+                  <span className="italic opacity-70">{emailDisplay}</span>
+                )}
               </li>
               <li className="flex items-center space-x-3">
                 <Clock className="text-primary shrink-0" size={20} aria-hidden />
-                <span>Mở cửa: 07:30 - 11:30, 13:30 - 21:00</span>
+                <span className={!siteConfig.openHours ? "italic opacity-70" : undefined}>{openHours}</span>
               </li>
             </ul>
           </div>
 
           <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-3">
             <h3 className="font-serif text-sm font-bold text-foreground">Bản đồ chỉ đường</h3>
-            <div className="w-full h-56 rounded-xl overflow-hidden border border-border">
-              <iframe
-                title="Bản đồ Chùa Huê Nghiêm"
-                className="w-full h-full border-0"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                src="https://maps.google.com/maps?q=Ch%C3%B9a%20Hu%C3%AA%20Nghi%C3%AAm%20L%C6%B0%C6%A1ng%20%C4%90%E1%BB%8Bnh%20C%E1%BB%A7a&t=&z=15&ie=UTF8&iwloc=&output=embed"
-              />
+            <div className="w-full h-56 rounded-xl overflow-hidden border border-border flex items-center justify-center bg-muted/30">
+              {siteConfig.mapEmbedUrl ? (
+                <iframe
+                  title={`Bản đồ ${templeName}`}
+                  className="w-full h-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={siteConfig.mapEmbedUrl}
+                />
+              ) : (
+                <div className="text-center p-4 space-y-2">
+                  <MapPin className="text-primary mx-auto" size={28} aria-hidden />
+                  <span className="text-xs text-muted block font-medium italic">Bản đồ đang cập nhật</span>
+                </div>
+              )}
             </div>
-            <a
-              href="https://maps.google.com/?q=Chùa+Huê+Nghiêm+Lương+Định+Của"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-block text-xs bg-primary text-primary-foreground font-bold px-4 py-2.5 rounded-full hover:bg-primary/95 transition-colors min-h-10"
-            >
-              Mở trên Google Maps
-            </a>
+            {siteConfig.mapLinkUrl ? (
+              <a
+                href={siteConfig.mapLinkUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block text-xs bg-primary text-primary-foreground font-bold px-4 py-2.5 rounded-full hover:bg-primary/95 transition-colors min-h-10"
+              >
+                Mở trên Google Maps
+              </a>
+            ) : null}
           </div>
         </div>
 
@@ -118,7 +143,10 @@ export default function ContactPage() {
 
           {success ? (
             <div className="text-center py-10 space-y-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/40 rounded-xl p-4">
-              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-950 text-green-600 dark:text-green-400 flex items-center justify-center mx-auto text-xl" aria-hidden>
+              <div
+                className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-950 text-green-600 dark:text-green-400 flex items-center justify-center mx-auto text-xl"
+                aria-hidden
+              >
                 ✓
               </div>
               <h3 className="font-bold text-foreground text-sm">Gửi thành công!</h3>
@@ -219,7 +247,10 @@ export default function ContactPage() {
               </p>
 
               {message && !success && (
-                <div role="alert" className="p-3 rounded-lg text-sm text-center font-medium bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-300">
+                <div
+                  role="alert"
+                  className="p-3 rounded-lg text-sm text-center font-medium bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-300"
+                >
                   {message}
                 </div>
               )}

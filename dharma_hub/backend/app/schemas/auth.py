@@ -25,6 +25,7 @@ class UserOut(OrmModel):
     is_active: bool
     is_locked: bool
     is_super_admin: bool
+    is_deleted: bool = False
     created_at: datetime
     updated_at: datetime
     role_names: list[str] = []
@@ -46,6 +47,7 @@ class UserUpdate(BaseModel):
     bio: str | None = None
     is_active: bool | None = None
     is_locked: bool | None = None
+    is_super_admin: bool | None = None
     role_ids: list[int] | None = None
 
 

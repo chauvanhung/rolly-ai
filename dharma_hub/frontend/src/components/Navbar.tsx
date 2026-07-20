@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme, useFontSize, useAuth } from "../context/AppContext";
 import SearchBar from "./SearchBar";
+import NotificationsBell from "./NotificationsBell";
 import {
   Sun,
   Moon,
@@ -189,6 +190,8 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-1 sm:gap-1.5">
+            <NotificationsBell />
+
             <button
               type="button"
               onClick={() => setSearchOpen((v) => !v)}

@@ -7,6 +7,7 @@ from sqlalchemy import or_, and_, desc
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.db import get_db
+from app.core.rate_limit import enforce_rate_limit
 from app.models import (
     Sutra,
     SutraChapter,
@@ -334,7 +335,13 @@ def get_retreat_by_slug(slug: str, db: Session = Depends(get_db)):
     return data
 
 @router.post("/retreats/{retreat_id}/register", response_model=Message)
-def register_retreat_public(retreat_id: int, payload: PublicRetreatRegister, db: Session = Depends(get_db)):
+def register_retreat_public(
+    retreat_id: int,
+    payload: PublicRetreatRegister,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    enforce_rate_limit(request, scope="public_retreat_register", limit=5, window_seconds=60)
     retreat = db.get(Retreat, retreat_id)
     if not retreat or retreat.is_deleted or retreat.status != "published":
         raise HTTPException(status_code=404, detail="Không tìm thấy khóa tu.")
@@ -389,7 +396,8 @@ def list_media(
     return [serialize_db_obj(x) for x in assets]
 
 @router.post("/contact", response_model=Message)
-def submit_contact(payload: PublicContactSubmit, db: Session = Depends(get_db)):
+def submit_contact(payload: PublicContactSubmit, request: Request, db: Session = Depends(get_db)):
+    enforce_rate_limit(request, scope="public_contact", limit=5, window_seconds=60)
     msg = ContactMessage(
         full_name=payload.full_name,
         email=payload.email,
@@ -402,7 +410,8 @@ def submit_contact(payload: PublicContactSubmit, db: Session = Depends(get_db)):
     return Message(message="Cảm ơn bạn đã liên hệ. Chúng tôi đã nhận được tin nhắn.")
 
 @router.post("/subscribe", response_model=Message)
-def subscribe_newsletter(payload: PublicSubscribeSubmit, db: Session = Depends(get_db)):
+def subscribe_newsletter(payload: PublicSubscribeSubmit, request: Request, db: Session = Depends(get_db)):
+    enforce_rate_limit(request, scope="public_subscribe", limit=5, window_seconds=60)
     # Check if already exists
     sub = db.query(Subscriber).filter(Subscriber.email == payload.email.lower()).first()
     if sub:

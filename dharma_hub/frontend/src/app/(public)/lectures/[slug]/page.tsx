@@ -6,6 +6,7 @@ import { ArrowLeft, Loader2, PlayCircle, Bookmark, FileText, Clock, Volume2, Che
 import { api } from "@/services/api";
 import { useAuth } from "@/context/AppContext";
 import AudioPlayer from "@/components/AudioPlayer";
+import RichTextContent from "@/components/RichTextContent";
 
 interface Params {
   slug: string;
@@ -188,12 +189,25 @@ export default function LectureDetailPage({ params }: { params: Promise<Params> 
               />
             </div>
           ) : lecture.audio_url ? (
-            <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
-              <AudioPlayer
-                src={lecture.audio_url}
-                title={lecture.title}
-                speaker={lecture.teacher?.name || "Giảng sư"}
-              />
+            <div className="space-y-4">
+              {lecture.cover_url && (
+                <div className="w-full aspect-video rounded-xl overflow-hidden border border-border shadow-md">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={lecture.cover_url} alt={lecture.title} className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+                <AudioPlayer
+                  src={lecture.audio_url}
+                  title={lecture.title}
+                  speaker={lecture.teacher?.name || "Giảng sư"}
+                />
+              </div>
+            </div>
+          ) : lecture.cover_url ? (
+            <div className="w-full aspect-video rounded-xl overflow-hidden border border-border shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={lecture.cover_url} alt={lecture.title} className="w-full h-full object-cover" />
             </div>
           ) : (
             <div className="w-full aspect-video rounded-xl bg-muted border border-border flex items-center justify-center">
@@ -220,7 +234,11 @@ export default function LectureDetailPage({ params }: { params: Promise<Params> 
             {/* Description */}
             <div className="space-y-2">
               <h4 className="text-xs font-bold text-muted uppercase tracking-wider font-serif">Giới thiệu bài giảng</h4>
-              <p className="text-sm text-muted leading-relaxed whitespace-pre-line">{lecture.description || "Chưa có mô tả."}</p>
+              {lecture.description ? (
+                <RichTextContent html={lecture.description} className="text-sm text-[#1a1612]" />
+              ) : (
+                <p className="text-sm text-[#1a1612]/70 leading-relaxed">Chưa có mô tả.</p>
+              )}
             </div>
 
             {/* Teacher Details */}
@@ -293,8 +311,8 @@ export default function LectureDetailPage({ params }: { params: Promise<Params> 
           </button>
           
           {transcriptOpen && (
-            <div className="border-t border-border/40 pt-4 text-sm text-muted leading-relaxed whitespace-pre-line animate-fadeIn">
-              {lecture.transcript}
+            <div className="border-t border-border/40 pt-4 text-sm text-[#1a1612] animate-fadeIn">
+              <RichTextContent html={lecture.transcript} />
             </div>
           )}
         </section>

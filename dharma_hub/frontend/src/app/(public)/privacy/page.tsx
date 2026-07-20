@@ -61,8 +61,8 @@ export default function PrivacyPage() {
             Quý vị có thể yêu cầu xem, chỉnh sửa hoặc xóa thông tin cá nhân bằng cách liên hệ đạo tràng qua trang{" "}
             <Link href="/contact" className="text-primary font-semibold hover:underline">
               Liên hệ
-            </Link>{" "}
-            hoặc email <strong className="text-foreground">lienhe@phatgiao.rollyhub.com</strong>.
+            </Link>
+            .
           </p>
         </section>
 

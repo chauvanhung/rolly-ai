@@ -197,11 +197,150 @@ def create_generic_router(*, module: str, model, label: str, search_fields: list
         pages = max(1, (total + page_size - 1) // page_size)
         return Page[AuditLogOut](items=items, total=total, page=page, page_size=page_size, pages=pages)
 
+    if module == "media_assets":
+        from fastapi import UploadFile, File
+        import shutil
+        import os
+        from app.core.config import settings
+
+        @router.post("/upload", response_model=GenericItem)
+        async def upload_media_file(
+            file: UploadFile = File(...),
+            db: Session = Depends(get_db),
+            actor: User = Depends(require_permission("media_assets.create")),
+        ):
+            from fastapi import HTTPException, status
+            import mimetypes
+            import re
+            import uuid
+            from pathlib import Path
+
+            # ~80MB soft limit (Cloudflare free ~100MB; keep headroom)
+            max_bytes = int(getattr(settings, "max_upload_size_mb", 20) or 20) * 1024 * 1024
+            # For audio/pdf allow up to 80MB regardless of default 20 if configured low
+            max_bytes = max(max_bytes, 80 * 1024 * 1024)
+
+            original = (file.filename or "upload.bin").strip() or "upload.bin"
+            safe_stem = re.sub(r"[^a-zA-Z0-9._-]+", "-", Path(original).stem).strip("-")[:80] or "file"
+            ext = Path(original).suffix.lower()[:16]
+            if not ext and file.content_type:
+                # fallback extension from content-type
+                guess = mimetypes.guess_extension(file.content_type.split(";")[0].strip()) or ""
+                ext = guess[:16]
+
+            # Strict file extension validation for security (preventing virus/scripts upload)
+            allowed_extensions = {
+                # Images
+                ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico",
+                # Audio
+                ".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac",
+                # Video
+                ".mp4", ".webm", ".mov", ".avi", ".mkv",
+                # Documents
+                ".pdf", ".epub", ".txt", ".doc", ".docx", ".xls", ".xlsx"
+            }
+            if ext not in allowed_extensions:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Định dạng tệp {ext} không được phép tải lên hệ thống bảo mật."
+                )
+
+            file_name = f"{safe_stem}-{uuid.uuid4().hex[:10]}{ext}"
+            file_path = os.path.join(settings.upload_dir, file_name)
+            os.makedirs(settings.upload_dir, exist_ok=True)
+
+            try:
+                size_bytes = 0
+                with open(file_path, "wb") as out:
+                    while True:
+                        chunk = await file.read(1024 * 1024)  # 1MB chunks
+                        if not chunk:
+                            break
+                        size_bytes += len(chunk)
+                        if size_bytes > max_bytes:
+                            out.close()
+                            try:
+                                os.remove(file_path)
+                            except OSError:
+                                pass
+                            raise HTTPException(
+                                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                                detail=f"File quá lớn (tối đa {max_bytes // (1024 * 1024)}MB). Hãy nén MP3 hoặc cắt ngắn hơn.",
+                            )
+                        out.write(chunk)
+            except HTTPException:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                print(f"[media_upload] write failed: {exc!r}", flush=True)
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except OSError:
+                    pass
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Không ghi được file lên máy chủ: {exc}",
+                ) from exc
+
+            mime_type = (file.content_type or "").split(";")[0].strip() or None
+            if not mime_type:
+                mime_type, _ = mimetypes.guess_type(file_name)
+
+            # Extension-based fallbacks (Windows often sends empty/octet-stream for mp3)
+            if ext in {".mp3", ".mpeg", ".mpga"}:
+                mime_type = mime_type or "audio/mpeg"
+            elif ext in {".wav"}:
+                mime_type = mime_type or "audio/wav"
+            elif ext in {".m4a", ".aac"}:
+                mime_type = mime_type or "audio/mp4"
+            elif ext == ".pdf":
+                mime_type = mime_type or "application/pdf"
+            elif ext in {".jpg", ".jpeg"}:
+                mime_type = mime_type or "image/jpeg"
+            elif ext == ".png":
+                mime_type = mime_type or "image/png"
+
+            kind = "image"
+            if mime_type:
+                if mime_type.startswith("audio/") or ext in {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac"}:
+                    kind = "audio"
+                elif mime_type.startswith("video/") or ext in {".mp4", ".webm", ".mov"}:
+                    kind = "video"
+                elif mime_type == "application/pdf" or ext == ".pdf":
+                    kind = "pdf"
+            elif ext in {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac"}:
+                kind = "audio"
+            elif ext == ".pdf":
+                kind = "pdf"
+
+            try:
+                obj = model(
+                    file_name=file_name[:255],
+                    title=(original or file_name)[:255],
+                    url=f"/api/uploads/{file_name}",
+                    mime_type=(mime_type or "application/octet-stream")[:120],
+                    kind=kind,
+                    size_bytes=size_bytes,
+                    folder="/",
+                )
+                db.add(obj)
+                db.flush()
+                db.commit()
+                db.refresh(obj)
+                return serialize(obj)
+            except Exception as exc:  # noqa: BLE001
+                db.rollback()
+                print(f"[media_upload] db failed: {exc!r}", flush=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Lưu metadata media thất bại: {exc}",
+                ) from exc
+
     return router
 
 
 TEXT_CONTENT_FIELDS = {"title", "slug", "excerpt", "body", "description", "cover_url", "category_id", "tags_csv", "status", "approval_status", "references", "published_at", "scheduled_at", "is_pinned", "attachments_json"}
-LECTURE_FIELDS = {"title", "slug", "description", "video_url", "audio_url", "teacher_id", "duration_seconds", "transcript", "timestamps_json", "series_name", "series_order", "attachments_json", "source_channel", "category_id", "tags_csv", "status"}
+LECTURE_FIELDS = {"title", "slug", "description", "cover_url", "video_url", "audio_url", "teacher_id", "duration_seconds", "transcript", "timestamps_json", "series_name", "series_order", "attachments_json", "source_channel", "category_id", "tags_csv", "status"}
 TEACHER_FIELDS = {"name", "slug", "avatar_url", "bio", "organization", "status"}
 EVENT_FIELDS = {"title", "slug", "description", "location", "start_at", "end_at", "recurrence", "capacity", "registration_open", "cover_url", "status"}
 RETREAT_FIELDS = EVENT_FIELDS | {"schedule_json", "teacher_id"}

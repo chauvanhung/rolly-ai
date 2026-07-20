@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.security import hash_password
 from app.models import Permission, Role, User
 
@@ -62,15 +63,19 @@ def ensure_permissions_and_roles(db: Session) -> None:
 
 
 def ensure_demo_super_admin(db: Session) -> None:
-    # Chỉ tạo tài khoản mẫu khi chưa có user nào. Đổi mật khẩu ngay sau khi triển khai thật.
+    if not settings.enable_demo_admin:
+        return
     if db.query(User).count() > 0:
         return
+    if not settings.demo_admin_email or not settings.demo_admin_password:
+        return
+
     ensure_permissions_and_roles(db)
     role = db.query(Role).filter(Role.slug == "super-admin").first()
     user = User(
-        email="admin@phatgiao.rollyhub.com",
+        email=settings.demo_admin_email.lower().strip(),
         full_name="Quản trị viên",
-        hashed_password=hash_password("ChangeMe123!"),
+        hashed_password=hash_password(settings.demo_admin_password),
         is_super_admin=True,
         is_active=True,
     )
@@ -78,4 +83,3 @@ def ensure_demo_super_admin(db: Session) -> None:
         user.roles.append(role)
     db.add(user)
     db.commit()
-

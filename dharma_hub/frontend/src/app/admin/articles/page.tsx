@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import GenericAdminTable from "@/components/GenericAdminTable";
 import AuditTab from "@/components/AuditTab";
+import RichTextEditor from "@/components/RichTextEditor";
 import { api } from "@/services/api";
 import { X, Calendar } from "lucide-react";
 
@@ -89,6 +90,11 @@ export default function AdminArticlesPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    const plainBody = body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (!plainBody) {
+      setError("Vui lòng nhập nội dung chi tiết bài viết.");
+      return;
+    }
     setLoading(true);
     try {
       const payload = {
@@ -104,13 +110,13 @@ export default function AdminArticlesPage() {
 
       if (activeItem) {
         await api(`/dharma_talks/${activeItem.id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
+          method: "PATCH",
+          body: JSON.stringify({ data: payload }),
         });
       } else {
         await api("/dharma_talks", {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ data: payload }),
         });
       }
 
@@ -214,11 +220,12 @@ export default function AdminArticlesPage() {
                         onChange={(e) => setAuthorId(e.target.value ? Number(e.target.value) : "")}
                         className="w-full text-xs"
                       >
-                        <option value="">Chọn giảng sư</option>
+                        <option value="">— Chưa rõ / chưa cập nhật —</option>
                         {teachers.map((t) => (
                           <option key={t.id} value={t.id}>{t.name}</option>
                         ))}
                       </select>
+                      <p className="text-[10px] text-muted">Không bắt buộc.</p>
                     </div>
 
                     <div className="space-y-1">
@@ -261,13 +268,11 @@ export default function AdminArticlesPage() {
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted uppercase">Nội dung chi tiết bài viết *</label>
-                    <textarea
-                      required
-                      rows={10}
-                      placeholder="Viết nội dung bài pháp thoại tu học..."
+                    <RichTextEditor
                       value={body}
-                      onChange={(e) => setBody(e.target.value)}
-                      className="w-full text-xs leading-relaxed"
+                      onChange={setBody}
+                      placeholder="Viết nội dung bài pháp thoại… (editor giống Word, dán từ Word/Docs được)"
+                      minHeight="280px"
                     />
                   </div>
 

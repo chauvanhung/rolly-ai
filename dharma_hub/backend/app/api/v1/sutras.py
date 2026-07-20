@@ -226,7 +226,8 @@ def update_chapter(sutra_id: int, chapter_id: int, payload: SutraChapterUpdate, 
     if not chapter:
         raise HTTPException(status_code=404, detail="Không tìm thấy chương/phẩm.")
     before = safe_snapshot(chapter)
-    _set_fields(chapter, payload)
+    # skip_none=False: cho phép gỡ volume_title (null) / clear field
+    _set_fields(chapter, payload, skip_none=False)
     chapter.updated_by = actor.id
     write_audit(db, action="update", module="sutra_chapters", entity_id=chapter.id, actor=actor, before=before, after=safe_snapshot(chapter), summary=chapter.title, request=request)
     db.commit()

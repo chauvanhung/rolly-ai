@@ -1,4 +1,4 @@
-services:
+﻿services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -20,14 +20,23 @@ services:
     restart: unless-stopped
     environment:
       APP_NAME: phatgiao
+      APP_ENV: ${APP_ENV:-production}
       DATABASE_URL: postgresql+psycopg2://dharma_user:dharma_password@postgres:5432/dharma_hub
-      JWT_SECRET: change-me-phatgiao-local
+      JWT_SECRET: ${JWT_SECRET:-change-me-phatgiao-local-replace-in-prod}
       UPLOAD_DIR: /app/uploads
-      CORS_ORIGINS: "*"
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://phatgiao.rollyhub.com,http://127.0.0.1:3015,http://localhost:3015}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_AUTH_REDIRECT_URI: ${GOOGLE_AUTH_REDIRECT_URI:-https://phatgiao.rollyhub.com/api/v1/auth/google/callback}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-https://phatgiao.rollyhub.com}
+      ENABLE_DEMO_ADMIN: ${ENABLE_DEMO_ADMIN:-false}
+      DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-}
     volumes:
       - dharma_uploads:/app/uploads
     ports:
-      - "8015:8000"
+      # Bind localhost only — traffic public qua Caddy/Cloudflare, tránh lộ API trực tiếp
+      - "127.0.0.1:8015:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,11 +52,14 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     restart: unless-stopped
     ports:
-      - "3015:3000"
+      - "127.0.0.1:3015:3000"
     environment:
       BACKEND_URL: http://backend:8000/api/v1/:path*
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     depends_on:
       backend:
         condition: service_healthy
@@ -61,4 +73,5 @@ services:
 volumes:
   dharma_pgdata:
   dharma_uploads:
+
 

@@ -6,6 +6,7 @@ import { Search, ArrowRight } from "lucide-react";
 import { api } from "@/services/api";
 import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
+import MediaPlaceholder from "@/components/ui/MediaPlaceholder";
 import { CardSkeleton } from "@/components/ui/Skeleton";
 
 export default function SutrasListPage() {
@@ -133,9 +134,15 @@ export default function SutrasListPage() {
             {items.map((item) => (
               <article
                 key={item.id}
-                className="bg-card border border-border rounded-xl p-6 shadow-sm flex flex-col justify-between hover:border-primary/20 transition-all"
+                className="bg-card border border-border rounded-xl overflow-hidden shadow-sm flex flex-col justify-between hover:border-primary/20 transition-all"
               >
-                <div className="space-y-3">
+                <MediaPlaceholder
+                  variant="cover"
+                  src={item.cover_url}
+                  alt={item.title}
+                  className="border-0 border-b rounded-none aspect-[16/9]"
+                />
+                <div className="space-y-3 p-6 pb-0">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="font-mono">{item.sutra_group || "Kinh văn"}</span>
                     {item.reading_minutes && <span>{item.reading_minutes} phút đọc</span>}
@@ -145,7 +152,7 @@ export default function SutrasListPage() {
                     {item.summary || "Đang cập nhật tóm tắt..."}
                   </p>
                 </div>
-                <div className="mt-6 pt-4 border-t border-border/40 flex items-center justify-between text-xs gap-2">
+                <div className="mx-6 mt-6 pt-4 pb-6 border-t border-border/40 flex items-center justify-between text-xs gap-2">
                   <span className="text-muted-foreground truncate max-w-[150px]">
                     Dịch giả: {item.translator || "Khuyết danh"}
                   </span>

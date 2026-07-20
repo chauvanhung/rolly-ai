@@ -141,12 +141,27 @@ export default function LecturesListPage() {
                 <div key={item.id} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm flex flex-col justify-between hover:border-primary/20 transition-all">
                   <div>
                     {/* Media Type Header image/color */}
-                    <div className="w-full h-40 bg-muted border-b border-border flex items-center justify-center relative">
-                      {isVideo ? (
-                        <Video size={40} className="text-primary/20" />
+                    <div className="w-full h-40 border-b border-border relative overflow-hidden">
+                      {item.cover_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.cover_url}
+                          alt={item.title}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
                       ) : (
-                        <Headphones size={40} className="text-primary/20" />
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                          {isVideo ? (
+                            <Video size={40} className="text-primary/20" />
+                          ) : (
+                            <Headphones size={40} className="text-primary/20" />
+                          )}
+                        </div>
                       )}
+                      <span className="absolute top-2 left-2 flex items-center space-x-1 rounded bg-background/80 text-[10px] px-2 py-0.5 font-bold">
+                        {isVideo ? <Video size={11} /> : <Headphones size={11} />}
+                        <span>{isVideo ? "Video" : "Audio"}</span>
+                      </span>
                       <span className="absolute bottom-2 right-2 rounded bg-background/80 text-[10px] px-2 py-0.5 font-bold font-mono">
                         {formatDuration(item.duration_seconds)}
                       </span>

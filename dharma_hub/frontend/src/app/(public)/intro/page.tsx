@@ -5,8 +5,12 @@ import Link from "next/link";
 import { Info, Award, ShieldAlert, Map, ArrowRight } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import MediaPlaceholder from "@/components/ui/MediaPlaceholder";
+import { siteConfig, displayOrPlaceholder } from "@/config/site";
 
 export default function IntroPage() {
+  const templeName = displayOrPlaceholder(siteConfig.templeName, "Đạo tràng");
+  const hasName = Boolean(siteConfig.templeName.trim());
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8 space-y-12 fade-in">
       <PageHeader
@@ -20,17 +24,22 @@ export default function IntroPage() {
           <span>Lịch sử hình thành & Ý nghĩa tên chùa</span>
         </h2>
         <div className="text-sm text-muted leading-relaxed space-y-3">
-          <p>
-            Chùa Huê Nghiêm được khởi dựng vào thế kỷ trước bởi các bậc cao tăng đức độ dòng Lâm Tế tông. Ban
-            đầu chỉ là một thảo am thanh tịnh dựng bên rạch sông nhỏ để các bậc hành giả an tâm chuyên sâu nhập
-            định.
-          </p>
-          <p>
-            Ý nghĩa pháp danh <strong className="text-foreground">&ldquo;Huê Nghiêm&rdquo;</strong>: Lấy ý nghĩa
-            từ bộ đại kinh đại thừa Hoa Nghiêm Kinh (tiếng cổ dùng chữ Huê thay cho Hoa), biểu trưng cho vạn
-            hạnh trang nghiêm, tu tập muôn công đức lành để trang nghiêm cõi Phật, khai mở trí tuệ viên mãn
-            rộng lớn như rừng hoa bừng nở trước ánh thái dương.
-          </p>
+          {hasName ? (
+            <>
+              <p>
+                <strong className="text-foreground">{templeName}</strong> được khởi dựng bởi các bậc cao tăng đức
+                độ, xây dựng không gian thanh tịnh để hành giả an tâm chuyên sâu nhập định và tu học chánh pháp.
+              </p>
+              <p>
+                Ý nghĩa pháp danh sẽ được bổ sung đầy đủ khi đạo tràng hoàn thiện nội dung giới thiệu chính thức.
+              </p>
+            </>
+          ) : (
+            <p className="italic opacity-80">
+              Tên chùa và lịch sử hình thành đang được cập nhật. Quý Phật tử vui lòng ghé trang Liên hệ để biết thêm
+              thông tin.
+            </p>
+          )}
         </div>
       </section>
 
@@ -41,7 +50,7 @@ export default function IntroPage() {
         </h2>
         <div className="text-sm text-muted leading-relaxed space-y-3">
           <p>
-            Chùa nỗ lực xây dựng một đạo tràng tu học Phật pháp chính thống, chú trọng việc kết hợp hài hòa giữa
+            Đạo tràng nỗ lực xây dựng không gian tu học Phật pháp chính thống, chú trọng kết hợp hài hòa giữa
             Pháp học (nghiên cứu kinh điển giáo lý) và Pháp hành (thực hành thiền định, chánh niệm trong đời
             sống).
           </p>
@@ -63,18 +72,10 @@ export default function IntroPage() {
         <div className="flex flex-col sm:flex-row gap-6 items-start">
           <MediaPlaceholder variant="avatar" className="mx-auto sm:mx-0" />
           <div className="text-sm text-muted leading-relaxed space-y-2">
-            <h3 className="text-base font-bold text-foreground">Đại lão Hòa thượng Trụ trì</h3>
-            <p>
-              Ngài là bậc cao tăng thạc đức, dành trọn cuộc đời tu học chánh pháp và truyền giảng giới luật.
-              Ngài thường nhắc nhở đại chúng đạo tràng:{" "}
-              <em>
-                &ldquo;Tu tập là quay về nhận diện và chuyển hóa chính mình trong từng sát-na, không cầu xin ban
-                phước bên ngoài.&rdquo;
-              </em>
-            </p>
-            <p>
-              Hiện nay, ban phụ trách công việc chùa được chia thành các ban chuyên trách gồm Ban giáo thọ
-              (phụ trách giảng dạy), Ban thư ký (nhận đăng ký khóa tu) và Ban hậu cần phụ trách bữa chay.
+            <h3 className="text-base font-bold text-foreground">Ban trụ trì</h3>
+            <p className="italic opacity-80">
+              Thông tin tiểu sử ban trụ trì đang được cập nhật. Quý Phật tử vui lòng liên hệ đạo tràng để biết
+              thêm chi tiết.
             </p>
           </div>
         </div>
@@ -125,9 +126,8 @@ export default function IntroPage() {
         </h2>
         <div className="text-sm text-muted leading-relaxed space-y-3">
           <p>
-            Khuôn viên chùa rộng rãi bao gồm Chánh điện (nơi hành lễ chính), Nhà Tổ (lưu niệm tổ sư), Giảng
-            đường (nơi học giáo lý), Thiền đường tĩnh lặng (chỉ dành cho tọa thiền) và khu nhà bếp phục vụ cơm
-            chay.
+            Khuôn viên chùa thường gồm Chánh điện, Nhà Tổ, Giảng đường, Thiền đường và khu nhà bếp phục vụ cơm
+            chay. Sơ đồ chi tiết sẽ được bổ sung sau.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center text-xs">
             {["Chánh điện", "Nhà Tổ", "Giảng đường", "Thiền đường", "Nhà bếp", "Sân vườn"].map((z) => (

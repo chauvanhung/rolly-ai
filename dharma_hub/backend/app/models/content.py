@@ -32,12 +32,14 @@ class Sutra(Base, TimestampMixin, SoftDeleteMixin, PublishMixin):
 
 
 class SutraChapter(Base, TimestampMixin, SoftDeleteMixin):
-    """Chuong / pham."""
+    """Chuong / pham. Kinh dai co the gan volume_title (Tap / Quyển)."""
 
     __tablename__ = "sutra_chapters"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     sutra_id: Mapped[int] = mapped_column(ForeignKey("sutras.id", ondelete="CASCADE"), nullable=False, index=True)
+    # Phân tầng: Tập/Quyển (vd. "Tập 1", "Quyển Thượng"). Null = không phân tập (Nikāya, kinh ngắn).
+    volume_title: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
     audio_url: Mapped[str | None] = mapped_column(String(600), nullable=True)
@@ -77,6 +79,7 @@ class Lecture(Base, TimestampMixin, SoftDeleteMixin, PublishMixin):
     title: Mapped[str] = mapped_column(String(300), nullable=False, index=True)
     slug: Mapped[str] = mapped_column(String(350), unique=True, nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cover_url: Mapped[str | None] = mapped_column(String(600), nullable=True)
     video_url: Mapped[str | None] = mapped_column(String(600), nullable=True)
     audio_url: Mapped[str | None] = mapped_column(String(600), nullable=True)
     teacher_id: Mapped[int | None] = mapped_column(

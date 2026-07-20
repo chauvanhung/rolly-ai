@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Play } from "lucide-react";
+import { ArrowLeft, Loader2, FileDown } from "lucide-react";
 import { api } from "@/services/api";
 import { useAuth } from "@/context/AppContext";
 import ReadingView from "@/components/ReadingView";
 import AudioPlayer from "@/components/AudioPlayer";
+import MediaPlaceholder from "@/components/ui/MediaPlaceholder";
 
 interface Params {
   slug: string;
@@ -128,6 +129,30 @@ export default function SutraDetailPage({ params }: { params: Promise<Params> })
           <span>Thư viện kinh điển</span>
         </Link>
       </div>
+
+
+      {sutra.cover_url && (
+        <MediaPlaceholder
+          variant="banner"
+          src={sutra.cover_url}
+          alt={sutra.title}
+          className="rounded-2xl shadow-sm h-64 sm:h-80 border-primary/10"
+        />
+      )}
+
+      {sutra.pdf_url && (
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <a
+            href={sutra.pdf_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm font-bold text-primary hover:bg-primary/10 transition-colors"
+          >
+            <FileDown size={16} />
+            Tải PDF kinh văn
+          </a>
+        </div>
+      )}
 
       {/* Embedded Audio Player if Chanting Audio URL exists */}
       {sutra.audio_url && (

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Calendar, MapPin, Loader2, Info, CheckCircle2, User, AlertCircle, Clock } from "lucide-react";
 import { api } from "@/services/api";
 import { useAuth } from "@/context/AppContext";
+import RichTextContent from "@/components/RichTextContent";
 
 interface Params {
   slug: string;
@@ -154,7 +155,11 @@ export default function RetreatDetailPage({ params }: { params: Promise<Params> 
           {/* Description */}
           <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-3">
             <h3 className="font-serif text-base font-bold text-foreground">Giới thiệu chương trình tu</h3>
-            <p className="text-sm text-muted leading-relaxed whitespace-pre-line">{retreat.description || "Chưa có giới thiệu."}</p>
+            {retreat.description ? (
+              <RichTextContent html={retreat.description} className="text-sm text-[#1a1612]" />
+            ) : (
+              <p className="text-sm text-[#1a1612]/70 leading-relaxed">Chưa có giới thiệu.</p>
+            )}
           </div>
 
           {/* Daily Schedule */}

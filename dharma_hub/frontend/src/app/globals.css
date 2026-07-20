@@ -53,8 +53,24 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
 
-  --font-sans: var(--font-sans-family), system-ui, -apple-system, sans-serif;
-  --font-serif: var(--font-serif-family), Georgia, "Times New Roman", serif;
+  /* Token names used by font-sans / font-serif utilities */
+  --font-sans: var(--font-sans-family), "Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: var(--font-serif-family), "Noto Serif", Georgia, "Times New Roman", serif;
+}
+
+/*
+ * next/font gắn --font-*-family trên <html class="...variable">.
+ * Tailwind @theme gán --font-sans trên :root; nếu resolve quá sớm có thể mất stack.
+ * Ép lại trên html (cùng node với variable class) để luôn dùng font Việt.
+ */
+html {
+  /* next/font set --font-*-family; fallback string nếu biến chưa có */
+  --font-sans: var(--font-sans-family, "Be Vietnam Pro"), "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: var(--font-serif-family, "Noto Serif"), Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* Custom Scrollbar */
@@ -76,16 +92,137 @@
 body {
   background-color: var(--background);
   color: var(--foreground);
+  font-family: inherit; /* Be Vietnam Pro từ layout body className + html stack */
   transition: background-color 0.3s ease, color 0.3s ease;
   line-height: 1.65;
   font-size: var(--app-font-size, 16px);
 }
 
-/* Typography styles for Sutra/Dharma talk reading */
-.reading-content {
-  font-family: var(--font-sans);
-  text-align: justify;
+/* Utility classes — luôn resolve từ html vars */
+.font-sans {
+  font-family: var(--font-sans) !important;
 }
+.font-serif {
+  font-family: var(--font-serif) !important;
+}
+
+/* Typography styles for Sutra/Dharma talk reading — chữ đậm, không chìm nền */
+.reading-content {
+  font-family: var(--font-serif);
+  text-align: justify;
+  font-size: 1.05em;
+  line-height: 1.85;
+  -webkit-font-smoothing: antialiased;
+  /* màu theo theme reader (warm/cream/dark) — inherit từ wrapper */
+  color: inherit;
+}
+
+/* Rich text (TipTap) — view + editor: mặc định tối trên nền sáng */
+.rich-content {
+  color: #1a1612;
+}
+/* Khi nằm trong reader theme tối — sáng hơn */
+.reading-content .rich-content {
+  color: inherit;
+}
+.rich-content p {
+  margin-bottom: 0.85em;
+  color: inherit;
+}
+.rich-content h2 {
+  font-family: var(--font-serif);
+  font-size: 1.35em;
+  font-weight: 700;
+  margin: 1.2em 0 0.5em;
+  /* primary vàng nhạt dễ chìm trên nền kem → dùng nâu đồng đậm */
+  color: #8a5a12;
+}
+.rich-content h3 {
+  font-family: var(--font-serif);
+  font-size: 1.15em;
+  font-weight: 700;
+  margin: 1em 0 0.4em;
+  color: #2a2218;
+}
+.rich-content ul {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin-bottom: 0.85em;
+}
+.rich-content ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+  margin-bottom: 0.85em;
+}
+.rich-content blockquote {
+  border-left: 3px solid #8a5a12;
+  padding-left: 1em;
+  margin: 0.8em 0;
+  color: #2a2218;
+  font-style: italic;
+}
+.rich-content a {
+  color: #7a4a0e;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 600;
+}
+.rich-content a:hover {
+  color: #5c3608;
+}
+.rich-content hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1.25em 0;
+}
+.rich-content s,
+.rich-content del {
+  text-decoration: line-through;
+  opacity: 0.9;
+}
+.rich-content [data-indent] {
+  /* indent set inline via data-indent */
+}
+/* Màu chữ tùy chọn từ editor — không bị class cha (text-muted) át */
+.rich-content span[style*="color"],
+.ProseMirror span[style*="color"] {
+  opacity: 1 !important;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #9a8f82;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.ProseMirror {
+  outline: none;
+  color: #1a1612;
+}
+.ProseMirror p {
+  margin: 0.4em 0;
+  color: inherit;
+}
+.ProseMirror a {
+  color: #7a4a0e;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  font-weight: 600;
+}
+/* prose Tailwind hay làm chữ xám — ép lại trong vùng đọc/soạn */
+.prose.rich-content,
+.reading-content .prose,
+.reading-content .rich-content {
+  --tw-prose-body: #1a1612;
+  --tw-prose-headings: #2a2218;
+  --tw-prose-bold: #141210;
+  --tw-prose-quotes: #2a2218;
+  --tw-prose-links: #7a4a0e;
+  color: #1a1612;
+}
+
 .reading-content p {
   margin-bottom: 1.5rem;
 }
@@ -139,6 +276,205 @@ td {
 /* Animation utilities */
 .fade-in {
   animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* ===== Lễ Phật giáo: hoa sen SVG + pháp luân + hào quang ===== */
+@keyframes festivalBannerIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes festivalShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+@keyframes festivalIconSoft {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--primary) 0%, transparent);
+  }
+}
+@keyframes festivalPetalDrift {
+  0% {
+    transform: translate3d(0, -12vh, 0) rotate(0deg) scale(var(--petal-scale, 1));
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--petal-drift, 28px), 112vh, 0) rotate(480deg) scale(var(--petal-scale, 1));
+    opacity: 0.1;
+  }
+}
+@keyframes festivalWheelSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes festivalHaloPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.06);
+  }
+}
+@keyframes festivalSparkFloat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translateY(-12px) scale(1.2);
+    opacity: 0.55;
+  }
+}
+@keyframes festivalBuddhaFloat {
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+  50% {
+    transform: translate(-50%, -10px);
+  }
+}
+
+.festival-banner-in {
+  animation: festivalBannerIn 0.45s ease-out forwards;
+}
+.festival-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--primary) 55%, #e8c96a) 40%,
+    color-mix(in srgb, var(--primary) 35%, #fff) 50%,
+    color-mix(in srgb, var(--primary) 55%, #e8c96a) 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: festivalShimmer 4.5s linear infinite;
+  opacity: 0.9;
+}
+.festival-icon-soft {
+  animation: festivalIconSoft 3s ease-in-out infinite;
+}
+
+/* Ambient layer */
+.festival-ambient {
+  contain: layout style paint;
+}
+.festival-halo {
+  position: absolute;
+  width: min(42vw, 320px);
+  height: min(42vw, 320px);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--primary) 35%, transparent) 0%,
+    transparent 70%
+  );
+  filter: blur(8px);
+  animation: festivalHaloPulse 6s ease-in-out infinite;
+}
+.festival-halo-tl {
+  top: -8%;
+  left: -6%;
+}
+.festival-halo-tr {
+  top: -10%;
+  right: -8%;
+  animation-delay: 1.2s;
+}
+.festival-wheel-wrap {
+  position: absolute;
+  top: 12%;
+  right: 6%;
+  opacity: 0.22;
+}
+.festival-wheel {
+  animation: festivalWheelSpin 48s linear infinite;
+}
+.festival-buddha-mark {
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  height: auto;
+  /* Không grayscale — giữ vàng đồng của SVG */
+  filter: drop-shadow(0 8px 24px rgba(184, 134, 11, 0.25));
+  animation: festivalBuddhaFloat 8s ease-in-out infinite;
+  pointer-events: none;
+  user-select: none;
+  object-fit: contain;
+}
+.festival-buddha-grand {
+  width: min(36vw, 260px);
+  opacity: 0.42;
+}
+.festival-buddha-medium {
+  width: min(28vw, 200px);
+  opacity: 0.28;
+}
+.dark .festival-buddha-grand {
+  opacity: 0.5;
+}
+.dark .festival-buddha-medium {
+  opacity: 0.35;
+}
+.festival-petal-wrap {
+  position: absolute;
+  top: -5%;
+  animation-name: festivalPetalDrift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+.festival-spark {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffe9a8 0%, #d49c2a 40%, transparent 70%);
+  animation: festivalSparkFloat 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .festival-banner-in,
+  .festival-shimmer,
+  .festival-icon-soft,
+  .festival-petal-wrap,
+  .festival-wheel,
+  .festival-halo,
+  .festival-spark,
+  .festival-buddha-mark {
+    animation: none !important;
+  }
+  .festival-petal-wrap,
+  .festival-halo,
+  .festival-wheel-wrap,
+  .festival-buddha-mark,
+  .festival-spark {
+    display: none !important;
+  }
 }
 
 @keyframes fadeIn {

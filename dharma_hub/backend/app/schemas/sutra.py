@@ -7,6 +7,8 @@ from app.schemas.common import OrmModel
 
 class SutraChapterBase(BaseModel):
     title: str = Field(min_length=1, max_length=300)
+    # Tầng trên chương: Tập / Quyển (vd. "Tập 1", "Quyển Thượng"). Optional.
+    volume_title: str | None = Field(default=None, max_length=200)
     body: str | None = None
     audio_url: str | None = None
     sort_order: int = 0
@@ -18,6 +20,7 @@ class SutraChapterCreate(SutraChapterBase):
 
 class SutraChapterUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=300)
+    volume_title: str | None = Field(default=None, max_length=200)
     body: str | None = None
     audio_url: str | None = None
     sort_order: int | None = None
@@ -26,6 +29,7 @@ class SutraChapterUpdate(BaseModel):
 class SutraChapterOut(OrmModel):
     id: int
     title: str
+    volume_title: str | None = None
     body: str | None = None
     audio_url: str | None = None
     sort_order: int

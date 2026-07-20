@@ -36,3 +36,32 @@ def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chỉ Super Admin được phép thực hiện.")
     return current_user
+
+
+# In-Memory Rate Limiter to protect public endpoints from spamming/DDoS
+import time
+from collections import defaultdict
+from fastapi import Request
+
+_request_history = defaultdict(list)
+
+def rate_limit_public(request: Request):
+    from app.core.config import settings
+    limit = settings.public_rate_limit
+    window = settings.public_rate_window_seconds
+    if limit <= 0:
+        return
+        
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    
+    # Filter out timestamps older than the sliding window
+    _request_history[client_ip] = [t for t in _request_history[client_ip] if now - t < window]
+    
+    if len(_request_history[client_ip]) >= limit:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Bạn gửi yêu cầu quá nhanh. Vui lòng chờ 1 phút và thử lại."
+        )
+        
+    _request_history[client_ip].append(now)

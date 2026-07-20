@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from "react";
 import GenericAdminTable from "@/components/GenericAdminTable";
 import AuditTab from "@/components/AuditTab";
+import RichTextEditor from "@/components/RichTextEditor";
 import { api } from "@/services/api";
-import { X } from "lucide-react";
+import { X, Upload, Loader2, Music, Image as ImageIcon } from "lucide-react";
 
 export default function AdminLecturesPage() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -14,12 +15,15 @@ export default function AdminLecturesPage() {
 
   // Choices list
   const [teachers, setTeachers] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
 
   // Form states
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [teacherId, setTeacherId] = useState<number | "">("");
+  const [categoryId, setCategoryId] = useState<number | "">("");
   const [description, setDescription] = useState("");
+  const [coverUrl, setCoverUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [durationSeconds, setDurationSeconds] = useState(1800);
@@ -30,19 +34,24 @@ export default function AdminLecturesPage() {
   const [status, setStatus] = useState("draft");
 
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState<"audio" | "cover" | null>(null);
   const [error, setError] = useState("");
 
-  // Load teachers on mount
+  // Load teachers + categories (lectures)
   useEffect(() => {
-    async function loadTeachers() {
+    async function loadChoices() {
       try {
-        const data = await api("/public/teachers");
-        setTeachers(data || []);
+        const [teachData, catData] = await Promise.all([
+          api("/public/teachers"),
+          api("/public/categories?module=lectures"),
+        ]);
+        setTeachers(teachData || []);
+        setCategories(catData || []);
       } catch (err) {
-        console.error("Error loading teachers:", err);
+        console.error("Error loading teachers/categories:", err);
       }
     }
-    loadTeachers();
+    loadChoices();
   }, []);
 
   const columns = [
@@ -58,7 +67,9 @@ export default function AdminLecturesPage() {
     setTitle("");
     setSlug("");
     setTeacherId("");
+    setCategoryId("");
     setDescription("");
+    setCoverUrl("");
     setVideoUrl("");
     setAudioUrl("");
     setDurationSeconds(1800);
@@ -67,7 +78,7 @@ export default function AdminLecturesPage() {
     setTimestampsJson("[\n  {\"time\": 0, \"label\": \"Khởi niệm giảng sư\"},\n  {\"time\": 300, \"label\": \"Ý nghĩa Chánh niệm\"}\n]");
     setTranscript("");
     setStatus("draft");
-    
+    setUploading(null);
     setError("");
     setActiveTab("form");
     setModalOpen(true);
@@ -78,7 +89,9 @@ export default function AdminLecturesPage() {
     setTitle(item.title || "");
     setSlug(item.slug || "");
     setTeacherId(item.teacher_id || "");
+    setCategoryId(item.category_id || "");
     setDescription(item.description || "");
+    setCoverUrl(item.cover_url || "");
     setVideoUrl(item.video_url || "");
     setAudioUrl(item.audio_url || "");
     setDurationSeconds(item.duration_seconds || 1800);
@@ -101,13 +114,70 @@ export default function AdminLecturesPage() {
     setStatus(item.status || "draft");
 
     setError("");
+    setUploading(null);
     setActiveTab("form");
     setModalOpen(true);
+  };
+
+  /** Upload MP3 / ảnh bìa qua media_assets → gán URL vào form */
+  const uploadFile = async (file: File, kind: "audio" | "cover") => {
+    if (kind === "audio") {
+      const ok = /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(file.name);
+      if (!ok) {
+        setError("Chỉ nhận file âm thanh: MP3, WAV, M4A, AAC, OGG, FLAC.");
+        return;
+      }
+      // ~80MB (khớp backend)
+      if (file.size > 80 * 1024 * 1024) {
+        setError("File audio quá lớn (tối đa 80MB). Hãy nén MP3 hoặc cắt ngắn hơn.");
+        return;
+      }
+    }
+    setUploading(kind);
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await api("/media_assets/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const url = res?.data?.url || res?.url;
+      if (!url) throw new Error("Upload thành công nhưng không nhận được URL.");
+      if (kind === "audio") {
+        setAudioUrl(url);
+        // Ước lượng thời lượng nếu browser đọc được metadata
+        try {
+          const objectUrl = URL.createObjectURL(file);
+          const audioEl = new Audio();
+          audioEl.preload = "metadata";
+          audioEl.src = objectUrl;
+          audioEl.onloadedmetadata = () => {
+            if (Number.isFinite(audioEl.duration) && audioEl.duration > 0) {
+              setDurationSeconds(Math.round(audioEl.duration));
+            }
+            URL.revokeObjectURL(objectUrl);
+          };
+        } catch {
+          /* ignore */
+        }
+      } else {
+        setCoverUrl(url);
+      }
+    } catch (err: any) {
+      setError(err.message || "Lỗi tải tệp lên.");
+    } finally {
+      setUploading(null);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!videoUrl.trim() && !audioUrl.trim()) {
+      setError("Cần có Video YouTube hoặc file/URL Audio MP3.");
+      return;
+    }
     setLoading(true);
     
     // Validate Timestamps JSON if input exists
@@ -129,7 +199,9 @@ export default function AdminLecturesPage() {
         title,
         slug: slug || undefined,
         teacher_id: teacherId ? Number(teacherId) : null,
+        category_id: categoryId ? Number(categoryId) : null,
         description: description || null,
+        cover_url: coverUrl || null,
         video_url: videoUrl || null,
         audio_url: audioUrl || null,
         duration_seconds: Number(durationSeconds),
@@ -142,13 +214,13 @@ export default function AdminLecturesPage() {
 
       if (activeItem) {
         await api(`/lectures/${activeItem.id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
+          method: "PATCH",
+          body: JSON.stringify({ data: payload }),
         });
       } else {
         await api("/lectures", {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ data: payload }),
         });
       }
 
@@ -246,16 +318,30 @@ export default function AdminLecturesPage() {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-muted uppercase">Giảng sư thuyết pháp *</label>
+                      <label className="text-[10px] font-bold text-muted uppercase">Giảng sư thuyết pháp</label>
                       <select
-                        required
                         value={teacherId}
                         onChange={(e) => setTeacherId(e.target.value ? Number(e.target.value) : "")}
                         className="w-full text-xs"
                       >
-                        <option value="">Chọn giảng sư</option>
+                        <option value="">— Chưa rõ / chưa cập nhật —</option>
                         {teachers.map((t) => (
                           <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                      <p className="text-[10px] text-muted">Không bắt buộc. Thêm giảng sư tại menu «Giảng sư / Nhà sư».</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-muted uppercase">Danh mục (tuỳ chọn)</label>
+                      <select
+                        value={categoryId}
+                        onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : "")}
+                        className="w-full text-xs"
+                      >
+                        <option value="">— Không chọn —</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
                         ))}
                       </select>
                     </div>
@@ -271,10 +357,10 @@ export default function AdminLecturesPage() {
                       />
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="space-y-1 sm:col-span-2">
                       <label className="text-[10px] font-bold text-muted uppercase">Địa chỉ Video (YouTube URL)</label>
                       <input
-                        type="url"
+                        type="text"
                         placeholder="https://www.youtube.com/watch?v=..."
                         value={videoUrl}
                         onChange={(e) => setVideoUrl(e.target.value)}
@@ -282,15 +368,85 @@ export default function AdminLecturesPage() {
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-muted uppercase">Địa chỉ Audio MP3 (Audio URL)</label>
-                      <input
-                        type="url"
-                        placeholder="https://example.com/lecture.mp3"
-                        value={audioUrl}
-                        onChange={(e) => setAudioUrl(e.target.value)}
-                        className="w-full text-xs font-mono"
-                      />
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-[10px] font-bold text-muted uppercase">Audio MP3 — upload hoặc dán URL</label>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="/api/uploads/....mp3 hoặc https://..."
+                          value={audioUrl}
+                          onChange={(e) => setAudioUrl(e.target.value)}
+                          className="min-w-0 flex-1 text-xs font-mono"
+                        />
+                        <label
+                          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/10 ${
+                            uploading === "audio" ? "opacity-60 pointer-events-none" : ""
+                          }`}
+                        >
+                          {uploading === "audio" ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Upload size={14} />
+                          )}
+                          {uploading === "audio" ? "Đang tải…" : "Chọn file MP3"}
+                          <input
+                            type="file"
+                            accept="audio/mpeg,audio/mp3,audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac"
+                            className="hidden"
+                            disabled={!!uploading}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              e.target.value = "";
+                              if (f) void uploadFile(f, "audio");
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {audioUrl && (
+                        <p className="flex items-center gap-1.5 text-[11px] text-green-700">
+                          <Music size={12} />
+                          Đã gắn: <span className="font-mono truncate max-w-full">{audioUrl}</span>
+                        </p>
+                      )}
+                      <p className="text-[10px] text-muted">
+                        Chọn file từ máy → upload lên server (tối đa 80MB). Không cần dán URL tay.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-[10px] font-bold text-muted uppercase">Ảnh bìa (tuỳ chọn)</label>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="/api/uploads/....jpg"
+                          value={coverUrl}
+                          onChange={(e) => setCoverUrl(e.target.value)}
+                          className="min-w-0 flex-1 text-xs font-mono"
+                        />
+                        <label
+                          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-bold hover:bg-muted/40 ${
+                            uploading === "cover" ? "opacity-60 pointer-events-none" : ""
+                          }`}
+                        >
+                          {uploading === "cover" ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <ImageIcon size={14} />
+                          )}
+                          {uploading === "cover" ? "Đang tải…" : "Upload ảnh"}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={!!uploading}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              e.target.value = "";
+                              if (f) void uploadFile(f, "cover");
+                            }}
+                          />
+                        </label>
+                      </div>
                     </div>
 
                     <div className="space-y-1">
@@ -329,23 +485,21 @@ export default function AdminLecturesPage() {
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted uppercase">Mô tả bài giảng pháp thoại</label>
-                    <textarea
-                      rows={2}
-                      placeholder="Nhập mô tả ngắn gọn..."
+                    <RichTextEditor
                       value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      className="w-full text-xs"
+                      onChange={setDescription}
+                      placeholder="Mô tả ngắn gọn bài giảng… (có thể format như Word)"
+                      minHeight="120px"
                     />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted uppercase">Bản ghi âm văn bản (Transcript)</label>
-                    <textarea
-                      rows={6}
-                      placeholder="Bản chép đầy đủ nội dung bài giảng thoại để độc giả xem kết hợp..."
+                    <RichTextEditor
                       value={transcript}
-                      onChange={(e) => setTranscript(e.target.value)}
-                      className="w-full text-xs leading-relaxed"
+                      onChange={setTranscript}
+                      placeholder="Bản chép bài giảng… (format giống Word)"
+                      minHeight="220px"
                     />
                   </div>
 
@@ -379,10 +533,10 @@ export default function AdminLecturesPage() {
                     </button>
                     <button
                       type="submit"
-                      disabled={loading}
+                      disabled={loading || !!uploading}
                       className="px-4 py-2 bg-primary text-primary-foreground font-semibold rounded-lg text-xs hover:bg-primary/95 disabled:opacity-50"
                     >
-                      {loading ? "Đang xử lý..." : "Lưu dữ liệu"}
+                      {loading ? "Đang xử lý..." : uploading ? "Đang upload…" : "Lưu dữ liệu"}
                     </button>
                   </div>
                 </form>

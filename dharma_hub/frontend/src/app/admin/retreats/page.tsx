@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import GenericAdminTable from "@/components/GenericAdminTable";
 import AuditTab from "@/components/AuditTab";
+import RichTextEditor from "@/components/RichTextEditor";
 import { api, exportUrl } from "@/services/api";
 import { X, Users, CheckCircle, XCircle, Clock, Download, ArrowLeft, Send } from "lucide-react";
 
@@ -134,6 +135,11 @@ export default function AdminRetreatsPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    const plainDesc = description.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (!plainDesc) {
+      setError("Vui lòng nhập giới thiệu khóa tu học.");
+      return;
+    }
     setLoading(true);
 
     let formattedSchedule = null;
@@ -166,13 +172,13 @@ export default function AdminRetreatsPage() {
 
       if (activeItem) {
         await api(`/retreats/${activeItem.id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
+          method: "PATCH",
+          body: JSON.stringify({ data: payload }),
         });
       } else {
         await api("/retreats", {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ data: payload }),
         });
       }
 
@@ -428,7 +434,7 @@ export default function AdminRetreatsPage() {
                       <input
                         required
                         type="text"
-                        placeholder="Giảng đường Chùa Huê Nghiêm"
+                        placeholder="Giảng đường / địa điểm khóa tu"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         className="w-full text-xs"
@@ -442,11 +448,12 @@ export default function AdminRetreatsPage() {
                         onChange={(e) => setTeacherId(e.target.value ? Number(e.target.value) : "")}
                         className="w-full text-xs"
                       >
-                        <option value="">Chọn giảng sư</option>
+                        <option value="">— Chưa rõ / chưa cập nhật —</option>
                         {teachers.map((t) => (
                           <option key={t.id} value={t.id}>{t.name}</option>
                         ))}
                       </select>
+                      <p className="text-[10px] text-muted">Không bắt buộc.</p>
                     </div>
 
                     <div className="space-y-1">
@@ -509,13 +516,11 @@ export default function AdminRetreatsPage() {
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted uppercase">Giới thiệu khóa tu học *</label>
-                    <textarea
-                      required
-                      rows={4}
-                      placeholder="Mô tả tôn chỉ, đối tượng chiêu sinh và hoạt động..."
+                    <RichTextEditor
                       value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      className="w-full text-xs leading-relaxed"
+                      onChange={setDescription}
+                      placeholder="Mô tả tôn chỉ, đối tượng chiêu sinh và hoạt động… (editor giống Word)"
+                      minHeight="200px"
                     />
                   </div>
 

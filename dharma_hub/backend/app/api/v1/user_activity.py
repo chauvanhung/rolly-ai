@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 
 from app.api.deps import get_current_user
 from app.core.db import get_db
@@ -143,7 +143,14 @@ def get_reading_progress(
     current_user: User = Depends(get_current_user)
 ):
     progress = db.query(ReadingProgress).filter(ReadingProgress.user_id == current_user.id).all()
-    return [serialize_db_obj(p) for p in progress]
+    out = []
+    for p in progress:
+        data = serialize_db_obj(p)
+        sutra = db.get(Sutra, p.sutra_id)
+        data["sutra_title"] = sutra.title if sutra and not sutra.is_deleted else f"Kinh #{p.sutra_id}"
+        data["sutra_slug"] = sutra.slug if sutra and not sutra.is_deleted else None
+        out.append(data)
+    return out
 
 @router.post("/progress/reading", response_model=Message)
 def update_reading_progress(
@@ -230,9 +237,10 @@ def list_my_retreats(
     for reg in registrations:
         retreat = db.get(Retreat, reg.retreat_id)
         retreat_data = serialize_db_obj(retreat) if retreat else {}
-        
+
         reg_data = serialize_db_obj(reg)
         reg_data["retreat_details"] = retreat_data
+        reg_data["retreat_title"] = retreat_data.get("title") or f"Khóa tu #{reg.retreat_id}"
         serialized.append(reg_data)
-        
+
     return serialized

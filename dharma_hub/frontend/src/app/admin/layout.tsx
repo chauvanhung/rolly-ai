@@ -18,6 +18,13 @@ import {
   Loader2,
   Menu,
   X,
+  Image as ImageIcon,
+  UserCog,
+  UserRound,
+  Tags,
+  Newspaper,
+  HeartHandshake,
+  CalendarDays,
 } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -40,13 +47,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [user, loading, router]);
 
-  // Only link to pages that exist under /admin
   const menuItems = [
     { href: "/admin/dashboard", label: "Bảng tổng quan", icon: <LayoutDashboard size={16} /> },
+    { href: "/admin/users", label: "Người dùng", icon: <UserCog size={16} /> },
     { href: "/admin/sutras", label: "Kinh điển", icon: <BookOpen size={16} /> },
     { href: "/admin/articles", label: "Bài pháp", icon: <FileText size={16} /> },
     { href: "/admin/lectures", label: "Bài giảng", icon: <PlayCircle size={16} /> },
+    { href: "/admin/events", label: "Lịch Phật sự", icon: <CalendarDays size={16} /> },
     { href: "/admin/retreats", label: "Khóa tu học", icon: <Calendar size={16} /> },
+    { href: "/admin/news", label: "Tin / Thông báo", icon: <Newspaper size={16} /> },
+    { href: "/admin/charities", label: "Thiện nguyện", icon: <HeartHandshake size={16} /> },
+    { href: "/admin/teachers", label: "Giảng sư / Nhà sư", icon: <UserRound size={16} /> },
+    { href: "/admin/categories", label: "Danh mục", icon: <Tags size={16} /> },
+    { href: "/admin/media", label: "Thư viện Media", icon: <ImageIcon size={16} /> },
     { href: "/admin/contacts", label: "Thư liên hệ", icon: <Mail size={16} /> },
     { href: "/admin/subscribers", label: "Người nhận tin", icon: <Users2 size={16} /> },
   ];
@@ -60,7 +73,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (loading || !user) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-muted bg-[#12110F]">
+      <div className="flex items-center justify-center min-h-screen text-muted bg-[#12110F] font-sans">
         <Loader2 className="animate-spin mr-2 text-primary" size={24} />
         <span className="text-sm font-semibold text-gray-300">Đang kiểm tra quyền hạn CMS...</span>
       </div>
@@ -68,10 +81,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50/50 dark:bg-[#12110F] text-foreground font-sans transition-colors duration-200">
+    <div className="flex min-h-screen bg-slate-50/50 dark:bg-[#12110F] text-foreground font-sans antialiased transition-colors duration-200">
       <aside className="hidden lg:flex flex-col w-64 bg-card border-r border-border h-screen sticky top-0">
         <div className="h-16 flex items-center px-6 border-b border-border space-x-2">
-          <span className="text-2xl text-primary" aria-hidden>
+          <span className="text-2xl text-primary select-none" aria-hidden>
             ☸
           </span>
           <span className="font-serif text-lg font-bold tracking-wide text-foreground">Dharma Hub CMS</span>
@@ -125,19 +138,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Menu size={22} />
           </button>
 
-          <span className="hidden sm:inline text-xs font-bold text-muted flex items-center">
+          <span className="hidden sm:inline-flex text-xs font-bold text-muted items-center">
             <ShieldCheck size={14} className="mr-1.5 text-primary" aria-hidden />
-            <span>Phân hệ quản trị nội dung Phật giáo</span>
+            <span>Phần hệ quản trị nội dung Phật giáo</span>
           </span>
 
           <div className="flex items-center space-x-4">
-            <span className="text-xs font-semibold text-foreground bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full font-mono">
+            <span className="text-xs font-semibold text-foreground bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full">
               Quản trị: {user.full_name}
             </span>
           </div>
         </header>
 
-        <main id="main-content" className="flex-grow p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <main id="main-content" className="flex-grow p-4 sm:p-6 lg:p-8 overflow-y-auto font-sans">
           {children}
         </main>
       </div>
@@ -148,12 +161,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <aside className="relative flex flex-col w-64 bg-card h-full border-r border-border max-w-xs animate-slideIn">
             <div className="h-16 flex items-center justify-between px-6 border-b border-border">
               <div className="flex items-center space-x-2">
-                <span className="text-2xl text-primary" aria-hidden>
+                <span className="text-2xl text-primary select-none" aria-hidden>
                   ☸
                 </span>
                 <span className="font-serif text-base font-bold">Dharma CMS</span>
               </div>
-              <button type="button" onClick={() => setMobileOpen(false)} className="p-2 text-muted min-h-11" aria-label="Đóng menu">
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                className="p-2 text-muted min-h-11"
+                aria-label="Đóng menu"
+              >
                 <X size={20} />
               </button>
             </div>

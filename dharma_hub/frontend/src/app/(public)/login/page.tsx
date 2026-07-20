@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AppContext";
-import { login as apiLogin, me } from "@/services/api";
-import { Lock, Mail, Loader2, ArrowRight, ShieldCheck } from "lucide-react";
+import { login as apiLogin, me, getApiUrl, setToken } from "@/services/api";
+import { Lock, Mail, Loader2, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const { user, loginUser } = useAuth();
@@ -14,17 +14,76 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
+  const [bootstrappingGoogle, setBootstrappingGoogle] = useState(true);
+
+  // Handle OAuth redirect return: ?access_token=...&google=1 (same pattern as app callback → FE)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("access_token");
+    const fromGoogle = params.get("google");
+    if (!token || fromGoogle !== "1") {
+      setBootstrappingGoogle(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        setToken(token);
+        const userData = await me();
+        if (cancelled) return;
+        loginUser(token, userData);
+        // Clean token from address bar
+        window.history.replaceState({}, "", "/login");
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Đăng nhập Google thất bại.");
+          setBootstrappingGoogle(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loginUser]);
 
   useEffect(() => {
     if (user) {
-      if (user.is_super_admin || user.role_names?.length > 0) {
+      if (user.is_super_admin || (user.role_names?.length ?? 0) > 0) {
         router.push("/admin/dashboard");
       } else {
         router.push("/account");
       }
     }
   }, [user, router]);
+
+  const handleGoogleLogin = async () => {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      const returnUrl = `${window.location.origin}/login`;
+      const res = await fetch(
+        `${getApiUrl()}/auth/google/connect?return_url=${encodeURIComponent(returnUrl)}`,
+        { method: "GET", headers: { Accept: "application/json" } }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = typeof data?.detail === "string" ? data.detail : "Không thể bắt đầu đăng nhập Google.";
+        throw new Error(detail);
+      }
+      if (!data?.auth_url) {
+        throw new Error("Server không trả auth_url Google.");
+      }
+      window.location.assign(data.auth_url);
+    } catch (err: unknown) {
+      setGoogleLoading(false);
+      setError(err instanceof Error ? err.message : "Không thể bắt đầu đăng nhập với Google.");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,13 +97,24 @@ export default function LoginPage() {
         userData = await me();
       }
       loginUser(token, userData);
-      // redirect handled by useEffect when user is set
-    } catch (err: any) {
-      setError(err.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (bootstrappingGoogle && typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("access_token") && params.get("google") === "1") {
+      return (
+        <div className="mx-auto max-w-md px-4 py-20 text-center text-sm text-muted">
+          <Loader2 className="mx-auto mb-3 animate-spin text-primary" size={24} />
+          Đang hoàn tất đăng nhập Google...
+        </div>
+      );
+    }
+  }
 
   return (
     <div className="mx-auto max-w-md px-4 py-16 sm:py-20 fade-in">
@@ -55,6 +125,33 @@ export default function LoginPage() {
           </span>
           <h1 className="font-serif text-2xl font-bold text-foreground">Đăng Nhập Đạo Tràng</h1>
           <p className="text-sm text-muted">Chào mừng quý Phật tử quay trở lại không gian tu học.</p>
+        </div>
+
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={googleLoading || loading}
+            className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-70 min-h-12"
+          >
+            {googleLoading ? (
+              <>
+                <Loader2 className="animate-spin" size={16} />
+                <span>Đang chuyển tới Google...</span>
+              </>
+            ) : (
+              <>
+                <span className="text-base font-bold text-[#4285F4]">G</span>
+                <span>Tiếp tục với Google</span>
+              </>
+            )}
+          </button>
+
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            <span>hoặc đăng nhập bằng email</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -88,7 +185,8 @@ export default function LoginPage() {
                 required
                 type="password"
                 autoComplete="current-password"
-                placeholder="••••••••"
+                placeholder="Tối thiểu 8 ký tự"
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-10"
@@ -107,7 +205,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || googleLoading}
             className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-lg text-sm transition-all hover:bg-primary/95 disabled:opacity-50 flex items-center justify-center space-x-1.5 shadow-sm min-h-12"
           >
             {loading ? (
@@ -126,23 +224,12 @@ export default function LoginPage() {
 
         <div className="text-center text-sm text-muted-foreground border-t border-border/40 pt-4">
           <span>Chưa có tài khoản Phật tử? </span>
-          <Link href="/register" className="text-primary font-semibold hover:underline">
-            Đăng ký ngay
+          <Link
+            href="/register"
+            className="inline-flex mt-3 items-center justify-center rounded-lg border border-primary px-4 py-2 text-primary font-bold hover:bg-primary hover:text-primary-foreground transition-colors"
+          >
+            Đăng ký tài khoản mới
           </Link>
-        </div>
-
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted space-y-1">
-          <span className="font-bold text-foreground flex items-center">
-            <ShieldCheck size={14} className="mr-1 text-primary" aria-hidden />
-            <span>Tài khoản demo (local):</span>
-          </span>
-          <p>
-            Email:{" "}
-            <span className="font-mono text-foreground font-semibold">admin@phatgiao.rollyhub.com</span>
-          </p>
-          <p>
-            Mật khẩu: <span className="font-mono text-foreground font-semibold">ChangeMe123!</span>
-          </p>
         </div>
       </div>
     </div>

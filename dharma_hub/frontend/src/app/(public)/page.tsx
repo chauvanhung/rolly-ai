@@ -18,6 +18,7 @@ import { getLunarDateString } from "@/utils/lunar";
 import MediaPlaceholder from "@/components/ui/MediaPlaceholder";
 import { CardSkeleton, ListSkeleton } from "@/components/ui/Skeleton";
 import EmptyState from "@/components/ui/EmptyState";
+import { FestivalCountdownChip } from "@/components/FestivalAtmosphere";
 
 export default function HomePage() {
   const [sutras, setSutras] = useState<any[]>([]);
@@ -157,9 +158,12 @@ export default function HomePage() {
     <div className="space-y-6 pb-16">
       <section className="bg-primary/5 border-b border-border/80 py-2.5 transition-colors">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center text-xs font-semibold text-primary gap-2">
-          <div className="flex items-center space-x-1.5 font-serif">
-            <span aria-hidden>☸</span>
-            <span>{getLunarDateString()}</span>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 font-serif">
+            <div className="flex items-center space-x-1.5">
+              <span aria-hidden>☸</span>
+              <span>{getLunarDateString()}</span>
+            </div>
+            <FestivalCountdownChip />
           </div>
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-muted-foreground">
             <span>Múi giờ Việt Nam GMT+7</span>
@@ -217,7 +221,7 @@ export default function HomePage() {
                   </p>
                   <div className="pt-2 flex items-center justify-between text-xs border-t border-border/40">
                     <span className="text-muted font-medium">
-                      Giảng sư: {featuredTalk.author_name || "Chùa Huê Nghiêm"}
+                      Giảng sư: {featuredTalk.author_name || "Đạo tràng"}
                     </span>
                     <Link
                       href={`/articles/${featuredTalk.slug}`}

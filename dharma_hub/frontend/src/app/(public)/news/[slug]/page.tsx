@@ -4,6 +4,7 @@ import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Calendar, FileText, Pin } from "lucide-react";
 import { api } from "@/services/api";
+import RichTextContent from "@/components/RichTextContent";
 
 interface Params {
   slug: string;
@@ -84,13 +85,13 @@ export default function NewsDetailPage({ params }: { params: Promise<Params> }) 
         </header>
 
         {/* Content Body */}
-        <div className="prose max-w-none text-sm text-muted leading-relaxed whitespace-pre-line text-justify">
-          {post.body}
+        <div className="prose max-w-none text-sm text-[#1a1612] text-justify">
+          <RichTextContent html={post.body} />
         </div>
         
         {/* Footer info */}
         <footer className="border-t border-border/30 pt-6 text-center text-xs text-muted-foreground/60 italic">
-          <p>Thông tin chính thức phát hành từ Ban Trị Sự Đạo Tràng Chùa Huê Nghiêm.</p>
+          <p>Thông tin chính thức phát hành từ Ban Trị Sự Đạo Tràng.</p>
         </footer>
       </article>
     </div>

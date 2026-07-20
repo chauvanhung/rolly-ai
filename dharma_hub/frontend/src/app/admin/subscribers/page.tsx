@@ -77,16 +77,16 @@ export default function AdminSubscribersPage() {
       };
 
       if (activeItem) {
-        // PUT /api/v1/subscribers/:id
+        // PATCH /api/v1/subscribers/:id
         await api(`/subscribers/${activeItem.id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
+          method: "PATCH",
+          body: JSON.stringify({ data: payload }),
         });
       } else {
         // POST /api/v1/subscribers
         await api("/subscribers", {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ data: payload }),
         });
       }
 
@@ -117,6 +117,8 @@ export default function AdminSubscribersPage() {
         onAddNew={openAddModal}
         refreshTrigger={refreshTrigger}
         canPublish={false}
+        hasStatusFilter={false}
+        canRestore={false}
       />
 
       {/* Modal Dialog Form */}

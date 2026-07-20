@@ -4,18 +4,45 @@ import React, { useState, useEffect } from "react";
 import { useFontSize } from "../context/AppContext";
 import { Maximize2, Minimize2, Bookmark, Check } from "lucide-react";
 import ShareButtons from "./ui/ShareButtons";
+import RichTextContent from "./RichTextContent";
+
+type ReadingChapter = {
+  id: number;
+  title: string;
+  body: string | null;
+  volume_title?: string | null;
+  sort_order?: number;
+};
 
 interface ReadingViewProps {
   title: string;
   subtitle?: string;
   body?: string;
-  chapters?: Array<{ id: number; title: string; body: string | null }>;
+  chapters?: ReadingChapter[];
   itemType: "sutra" | "dharma_talk";
   itemId: number;
   sharePath?: string;
   isBookmarked?: boolean;
   onBookmarkToggle?: () => void;
   onProgressSave?: (percent: number) => void;
+}
+
+/** Nhóm chương theo Tập (volume_title). Giữ thứ tự sort. */
+function groupChaptersByVolume(chapters: ReadingChapter[]) {
+  const groups: { volume: string | null; items: { ch: ReadingChapter; globalIdx: number }[] }[] = [];
+  const map = new Map<string, { volume: string | null; items: { ch: ReadingChapter; globalIdx: number }[] }>();
+
+  chapters.forEach((ch, globalIdx) => {
+    const vol = (ch.volume_title || "").trim() || null;
+    const key = vol ?? "__none__";
+    if (!map.has(key)) {
+      const g = { volume: vol, items: [] as { ch: ReadingChapter; globalIdx: number }[] };
+      map.set(key, g);
+      groups.push(g);
+    }
+    map.get(key)!.items.push({ ch, globalIdx });
+  });
+  return groups;
 }
 
 type ReaderTheme = "warm" | "cream" | "dark" | "gray";
@@ -74,15 +101,16 @@ export default function ReadingView({
   }, [isFocusMode]);
 
   const getThemeClass = () => {
+    // Chữ đậm hơn nền để không chìm (tương phản WCAG tốt hơn)
     switch (readerTheme) {
       case "warm":
-        return "bg-[#FAF5EC] text-[#2C241B] border-[#EADFC9]";
+        return "bg-[#FAF5EC] text-[#1a1612] border-[#EADFC9]";
       case "cream":
-        return "bg-[#FDFCF7] text-[#332F24] border-[#EFECE0]";
+        return "bg-[#FDFCF7] text-[#161410] border-[#EFECE0]";
       case "dark":
-        return "bg-[#181613] text-[#E5DFD5] border-[#332E27]";
+        return "bg-[#181613] text-[#F2EDE6] border-[#332E27]";
       case "gray":
-        return "bg-[#F2F2F2] text-[#222222] border-[#E0E0E0]";
+        return "bg-[#F2F2F2] text-[#141414] border-[#E0E0E0]";
     }
   };
 
@@ -195,35 +223,74 @@ export default function ReadingView({
           <span>{itemType === "sutra" ? "Kinh điển Phật giáo" : "Bài giảng & Pháp thoại"}</span>
         </div>
 
-        {chapters && chapters.length > 1 && (
-          <nav className="mb-8 p-4 rounded-xl border border-border/40 bg-card/40" aria-label="Mục lục chương">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted mb-2">Mục lục</p>
-            <ol className="space-y-1.5 text-sm">
-              {chapters.map((ch, idx) => (
-                <li key={ch.id}>
-                  <a href={`#chapter-${ch.id}`} className="text-primary hover:underline font-medium">
-                    {idx + 1}. {ch.title}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
-        )}
+        {chapters && chapters.length > 1 && (() => {
+          const groups = groupChaptersByVolume(chapters);
+          const hasVolumes = groups.some((g) => g.volume);
+          return (
+            <nav className="mb-8 p-4 rounded-xl border border-border/40 bg-card/40" aria-label="Mục lục chương">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted mb-3">
+                Mục lục{hasVolumes ? " (Tập → Chương)" : ""}
+              </p>
+              <div className="space-y-3">
+                {groups.map((g) => (
+                  <div key={g.volume ?? "__none__"}>
+                    {g.volume && (
+                      <p className="mb-1.5 font-serif text-sm font-bold text-foreground">
+                        <a href={`#volume-${encodeURIComponent(g.volume)}`} className="hover:text-primary">
+                          {g.volume}
+                        </a>
+                      </p>
+                    )}
+                    <ol className={`space-y-1 text-sm ${g.volume ? "ml-3 border-l border-border/50 pl-3" : ""}`}>
+                      {g.items.map(({ ch, globalIdx }) => (
+                        <li key={ch.id}>
+                          <a href={`#chapter-${ch.id}`} className="text-primary hover:underline font-medium">
+                            {globalIdx + 1}. {ch.title}
+                          </a>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+              </div>
+            </nav>
+          );
+        })()}
 
-        <div className="prose max-w-none prose-stone dark:prose-invert" style={{ fontSize: `${fontSize}px`, lineHeight: "1.8" }}>
+        <div
+          className="prose max-w-none prose-neutral max-w-none reader-body"
+          style={{ fontSize: `${fontSize}px`, lineHeight: "1.85", color: "inherit" }}
+        >
           {chapters && chapters.length > 0 ? (
-            <div className="space-y-12">
-              {chapters.map((ch, idx) => (
-                <section key={ch.id} id={`chapter-${ch.id}`} className="border-t border-border/30 pt-8 first:border-0 first:pt-0 scroll-mt-24">
-                  <h2 className="font-serif text-xl sm:text-2xl font-bold mb-4 text-primary">
-                    {idx + 1}. {ch.title}
-                  </h2>
-                  <div className="whitespace-pre-line leading-relaxed text-justify">{ch.body}</div>
-                </section>
+            <div className="space-y-10">
+              {groupChaptersByVolume(chapters).map((g) => (
+                <div key={g.volume ?? "__none__"} className="space-y-10">
+                  {g.volume && (
+                    <header
+                      id={`volume-${encodeURIComponent(g.volume)}`}
+                      className="scroll-mt-24 border-b-2 border-primary/30 pb-3 pt-2"
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Tập / Quyển</p>
+                      <h2 className="font-serif text-2xl sm:text-3xl font-bold text-foreground">{g.volume}</h2>
+                    </header>
+                  )}
+                  {g.items.map(({ ch, globalIdx }) => (
+                    <section
+                      key={ch.id}
+                      id={`chapter-${ch.id}`}
+                      className="border-t border-border/30 pt-8 first:border-0 first:pt-0 scroll-mt-24"
+                    >
+                      <h3 className="font-serif text-xl sm:text-2xl font-bold mb-4 text-[#8a5a12] dark:text-[#e0b44a]">
+                        {globalIdx + 1}. {ch.title}
+                      </h3>
+                      <RichTextContent html={ch.body} className="leading-relaxed" />
+                    </section>
+                  ))}
+                </div>
               ))}
             </div>
           ) : (
-            <div className="whitespace-pre-line leading-relaxed text-justify">{body}</div>
+            <RichTextContent html={body} className="leading-relaxed" />
           )}
         </div>
 

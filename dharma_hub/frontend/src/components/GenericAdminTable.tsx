@@ -65,7 +65,17 @@ export default function GenericAdminTable({
       if (onlyDeleted) params.set("only_deleted", "true");
       
       const res = await api(`/${module}?` + params.toString());
-      setItems(res.items || []);
+      const flatItems = (res.items || []).map((item: any) => {
+        if (item.data) {
+          return {
+            id: item.id,
+            ...item.data,
+            is_deleted: Boolean(item.data.is_deleted),
+          };
+        }
+        return item;
+      });
+      setItems(flatItems);
       setTotal(res.total || 0);
       setPage(res.page || 1);
     } catch (err: any) {

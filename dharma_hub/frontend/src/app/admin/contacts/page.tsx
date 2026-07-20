@@ -44,7 +44,7 @@ export default function AdminContactsPage() {
         // PATCH /api/v1/contact_messages/:id
         await api(`/contact_messages/${item.id}`, {
           method: "PATCH",
-          body: JSON.stringify({ is_read: true }),
+          body: JSON.stringify({ data: { is_read: true } }),
         });
         setRefreshTrigger((prev) => prev + 1);
       } catch (err) {

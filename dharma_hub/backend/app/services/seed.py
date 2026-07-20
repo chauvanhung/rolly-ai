@@ -28,22 +28,55 @@ def run_seed(db: Session) -> None:
     def exists_by_slug(model, slug: str) -> bool:
         return db.query(model).filter(model.slug == slug).first() is not None
 
-    # 1. Categories
+    # 1. Categories — bộ kinh + phân loại nội dung
     cats_data = [
-        # Sutras
-        {"name": "Kinh Nguyên Thủy", "slug": "kinh-nguyen-thuy", "module": "sutras", "sort_order": 1},
-        {"name": "Kinh Đại Thừa", "slug": "kinh-dai-thua", "module": "sutras", "sort_order": 2},
-        {"name": "Kinh Nhật Tụng", "slug": "kinh-nhat-tung", "module": "sutras", "sort_order": 3},
+        # --- Sutras: Nikāya (Nguyên thủy) ---
+        {"name": "Nikāya · Trường Bộ", "slug": "nikaya-truong-bo", "module": "sutras", "sort_order": 10,
+         "description": "Dīgha Nikāya — Kinh tạng Trường Bộ"},
+        {"name": "Nikāya · Trung Bộ", "slug": "nikaya-trung-bo", "module": "sutras", "sort_order": 20,
+         "description": "Majjhima Nikāya — Kinh tạng Trung Bộ"},
+        {"name": "Nikāya · Tương Ưng Bộ", "slug": "nikaya-tuong-ung-bo", "module": "sutras", "sort_order": 30,
+         "description": "Saṃyutta Nikāya — Kinh tạng Tương Ưng"},
+        {"name": "Nikāya · Tăng Chi Bộ", "slug": "nikaya-tang-chi-bo", "module": "sutras", "sort_order": 40,
+         "description": "Aṅguttara Nikāya — Kinh tạng Tăng Chi"},
+        {"name": "Nikāya · Tiểu Bộ", "slug": "nikaya-tieu-bo", "module": "sutras", "sort_order": 50,
+         "description": "Khuddaka Nikāya — Pháp Cú, Kinh Tập…"},
+        {"name": "Kinh Nguyên Thủy (chung)", "slug": "kinh-nguyen-thuy", "module": "sutras", "sort_order": 60,
+         "description": "Kinh Nguyên thủy chưa gán bộ cụ thể"},
+        # --- Sutras: Đại thừa / tông phái ---
+        {"name": "Kinh Đại Thừa", "slug": "kinh-dai-thua", "module": "sutras", "sort_order": 70,
+         "description": "Kinh điển Đại thừa (Pháp Hoa, Hoa Nghiêm, Lăng Nghiêm…)"},
+        {"name": "Kinh Tịnh Độ", "slug": "kinh-tinh-do", "module": "sutras", "sort_order": 80,
+         "description": "A Di Đà, Vô Lượng Thọ, Quán Vô Lượng Thọ…"},
+        {"name": "Thiền tông", "slug": "kinh-thien-tong", "module": "sutras", "sort_order": 90,
+         "description": "Kinh / ngữ lục Thiền"},
+        {"name": "Kinh Nhật Tụng", "slug": "kinh-nhat-tung", "module": "sutras", "sort_order": 100,
+         "description": "Kinh tụng phổ thông, nhật tụng"},
+        {"name": "Luật tạng", "slug": "luat-tang", "module": "sutras", "sort_order": 110,
+         "description": "Giới luật Tăng Ni"},
+        {"name": "Luận tạng", "slug": "luan-tang", "module": "sutras", "sort_order": 120,
+         "description": "A-tỳ-đạt-ma / luận thư"},
         # Dharma Talks
         {"name": "Phật Pháp Căn Bản", "slug": "phat-phap-can-ban", "module": "dharma_talks", "sort_order": 1},
         {"name": "Phật Pháp Ứng Dụng", "slug": "phat-phap-ung-dung", "module": "dharma_talks", "sort_order": 2},
         {"name": "Hỏi Đáp Phật Pháp", "slug": "hoi-dap-phat-phap", "module": "dharma_talks", "sort_order": 3},
+        {"name": "Giảng Kinh", "slug": "giang-kinh", "module": "dharma_talks", "sort_order": 4},
+        {"name": "Lịch sử Phật giáo", "slug": "lich-su-phat-giao", "module": "dharma_talks", "sort_order": 5},
         # Lectures
-        {"name": "Khóa Tu Mùa Hè", "slug": "khoa-tu-mua-he", "module": "lectures", "sort_order": 1},
-        {"name": "Pháp Thoại Định Kỳ", "slug": "phap-thoai-dinh-ky", "module": "lectures", "sort_order": 2},
+        {"name": "Pháp Thoại Định Kỳ", "slug": "phap-thoai-dinh-ky", "module": "lectures", "sort_order": 1},
+        {"name": "Khóa Tu Mùa Hè", "slug": "khoa-tu-mua-he", "module": "lectures", "sort_order": 2},
+        {"name": "Giảng Kinh (audio/video)", "slug": "giang-kinh-av", "module": "lectures", "sort_order": 3},
+        {"name": "Thiền / Chánh niệm", "slug": "thien-chanh-niem", "module": "lectures", "sort_order": 4},
+        {"name": "Tịnh Độ / Niệm Phật", "slug": "tinh-do-niem-phat", "module": "lectures", "sort_order": 5},
+        {"name": "Chưa phân loại", "slug": "bai-giang-chua-phan-loai", "module": "lectures", "sort_order": 99},
         # News
         {"name": "Thông Báo", "slug": "thong-bao", "module": "news_posts", "sort_order": 1},
         {"name": "Tin Hoạt Động", "slug": "tin-hoat-dong", "module": "news_posts", "sort_order": 2},
+        {"name": "Lịch Phật sự", "slug": "lich-phat-su", "module": "news_posts", "sort_order": 3},
+        # Retreats
+        {"name": "Khóa tu một ngày", "slug": "khoa-tu-mot-ngay", "module": "retreats", "sort_order": 1},
+        {"name": "Khóa tu nhiều ngày", "slug": "khoa-tu-nhieu-ngay", "module": "retreats", "sort_order": 2},
+        {"name": "Khóa tu mùa hè", "slug": "khoa-tu-mua-he-retreat", "module": "retreats", "sort_order": 3},
     ]
     categories = {}
     for c in cats_data:
