@@ -6,7 +6,6 @@ import unicodedata
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-import httpx
 from fastapi import HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -18,11 +17,13 @@ from backend.schemas.ai import AIActionResponse, AIResponse, ParsedTransactionPr
 from backend.schemas.planning import BudgetCreate, ReminderCreate, UtilityBillCreate
 from backend.schemas.transaction import TransactionCreate
 from backend.services.formatters import format_vnd
+from backend.services.llm_service import LLMService
 from backend.services.planning_service import PlanningService
 from backend.services.transaction_service import TransactionService
 
 
 class AIService:
+    SAFE_SQL_MAX_ROWS = 200
     TONE_PROMPTS = {
         "gentle": "Giọng hiền, ấm, tự nhiên, động viên nhẹ.",
         "straight": "Giọng thẳng, hơi cà khịa nhẹ nhưng không xúc phạm nặng.",
@@ -113,6 +114,7 @@ class AIService:
         self.transaction_service = TransactionService(db)
         self.planning_service = PlanningService(db)
         self.category_rules = CategoryRuleRepository(db)
+        self.llm = LLMService()
         self._current_user_id: int | None = None
 
     def answer(self, current_user: User, question: str, include_family: bool) -> AIResponse:
@@ -122,10 +124,12 @@ class AIService:
 
         generated_sql = self._generate_sql(question, include_family)
         rows = self._run_safe_query(generated_sql, current_user=current_user)
+        answer_text = self._summarize_rows(question, rows, current_user, include_family)
         return AIResponse(
-            answer=self._summarize_rows(question, rows, current_user, include_family),
+            answer=answer_text,
             sql=generated_sql,
             rows=rows[:20],
+            related_questions=self._build_related_questions("query", question, answer_text),
         )
 
     def execute_command(self, current_user: User, message: str, shared_with_family: bool, tone: str = "gentle") -> AIActionResponse:
@@ -134,18 +138,89 @@ class AIService:
         tone = tone if tone in self.TONE_PROMPTS else "gentle"
 
         if self._looks_like_greeting(normalized):
-            return self._chat_reply(message, tone)
+            return self._with_related(self._chat_reply(message, tone), message)
         if not self._extract_amount(normalized) and not self._looks_like_finance_intent(normalized):
-            return self._chat_reply(message, tone)
+            return self._with_related(self._chat_reply(message, tone), message)
         if self._looks_like_budget_command(normalized):
-            return self._create_budget_from_message(current_user, normalized, shared_with_family, tone)
+            return self._with_related(
+                self._create_budget_from_message(current_user, normalized, shared_with_family, tone),
+                message,
+            )
         if self._looks_like_reminder_command(normalized):
-            return self._create_reminder_from_message(current_user, normalized, tone)
+            return self._with_related(self._create_reminder_from_message(current_user, normalized, tone), message)
         if self._looks_like_utility_bill_command(normalized):
-            return self._create_utility_bill_from_message(current_user, normalized, tone)
+            return self._with_related(
+                self._create_utility_bill_from_message(current_user, normalized, tone),
+                message,
+            )
         if self._looks_like_social_message(normalized):
-            return self._chat_reply(message, tone)
-        return self._create_transaction_from_message(current_user, message, shared_with_family, tone)
+            return self._with_related(self._chat_reply(message, tone), message)
+        return self._with_related(
+            self._create_transaction_from_message(current_user, message, shared_with_family, tone),
+            message,
+        )
+
+    def _with_related(self, response: AIActionResponse, user_message: str) -> AIActionResponse:
+        if not response.related_questions:
+            response.related_questions = self._build_related_questions(
+                response.action or "chat",
+                user_message,
+                response.answer or "",
+            )
+        return response
+
+    def _build_related_questions(self, action: str, user_message: str, answer: str) -> list[str]:
+        """Gợi ý câu hỏi / lệnh liên quan (rule-based, ổn định; không tốn thêm round-trip LLM)."""
+        action = (action or "chat").lower()
+        catalogs: dict[str, list[str]] = {
+            "transaction": [
+                "Tháng này mình chi bao nhiêu?",
+                "Đặt ngân sách ăn uống 3 triệu",
+                "Nhắc tiền điện ngày 12",
+            ],
+            "budget": [
+                "Tháng này mình chi bao nhiêu?",
+                "Cafe sáng nay 45k",
+                "Nhắc đóng hóa đơn ngày 15",
+            ],
+            "reminder": [
+                "Thêm hóa đơn EVN mã khách hàng PC07G0500871",
+                "Đặt ngân sách hóa đơn 1 triệu",
+                "Tháng này mình chi bao nhiêu?",
+            ],
+            "utility_bill": [
+                "Nhắc tiền điện ngày 12",
+                "Đặt ngân sách hóa đơn 1 triệu",
+                "Tháng này mình chi bao nhiêu?",
+            ],
+            "query": [
+                "Nhóm nào chi nhiều nhất tháng này?",
+                "Tháng này mình thu bao nhiêu?",
+                "Đặt ngân sách ăn uống 3 triệu",
+            ],
+            "chat": [
+                "Hôm qua ăn trưa 60k",
+                "Đặt ngân sách ăn uống 3 triệu",
+                "Tháng này mình chi bao nhiêu?",
+            ],
+        }
+        base = list(catalogs.get(action, catalogs["chat"]))
+        # Nếu user đang hỏi về chi tiêu → ưu tiên câu phân tích
+        normalized = self._normalize_message(user_message)
+        if any(tok in normalized for tok in ("thang nay", "bao nhieu", "tong chi", "tong thu", "chi tieu")):
+            base = catalogs["query"] + [q for q in base if q not in catalogs["query"]]
+        # Khử trùng, tối đa 3
+        seen: set[str] = set()
+        out: list[str] = []
+        for item in base:
+            key = item.strip().lower()
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            out.append(item.strip())
+            if len(out) >= 3:
+                break
+        return out
 
     def _create_transaction_from_message(self, current_user: User, message: str, shared_with_family: bool, tone: str) -> AIActionResponse:
         parsed = self._parse_transaction_message(message, shared_with_family)
@@ -285,21 +360,16 @@ Hãy đọc câu tiếng Việt của người dùng và trả về JSON hợp l
   "created_at": "ISO-8601"
 }}
 Không trả lời giải thích, chỉ trả JSON.
-Câu người dùng: {message}
+        Câu người dùng: {message}
 """
         try:
-            response = httpx.post(
-                f"{settings.ollama_base_url}/api/generate",
-                json={
-                    "model": settings.ollama_llm_model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"num_predict": 120, "temperature": 0.1},
-                },
+            raw = self.llm.generate_text(
+                prompt=prompt,
+                max_tokens=120,
+                temperature=0.1,
                 timeout=min(settings.ai_request_timeout, 12),
             )
-            response.raise_for_status()
-            raw = response.json().get("response", "").strip().strip("`")
+            raw = raw.strip().strip("`")
             if "```" in raw:
                 raw = re.sub(r"```(?:json)?", "", raw, flags=re.IGNORECASE).replace("```", "").strip()
             data = json.loads(raw)
@@ -433,30 +503,20 @@ Câu người dùng: {message}
     def _chat_reply(self, message: str, tone: str) -> AIActionResponse:
         prompt = f"""
 Bạn là trợ lý tài chính cá nhân nói tiếng Việt, giọng tự nhiên, ngắn gọn, thân thiện.
-Ngữ cảnh: bạn đang ở trong app quản lý chi tiêu và đang chat với người dùng.
-Nếu người dùng chỉ đang chào hỏi, cảm ơn, xác nhận hoặc nói chuyện ngắn, hãy trả lời như một trợ lý tự nhiên.
-Nếu phù hợp, gợi ý thật ngắn người dùng có thể nhập một câu như:
-- hôm qua ăn trưa 60k
-- đặt ngân sách ăn uống 3 triệu
-- thêm hóa đơn EVN mã khách hàng ...
+Ngữ cảnh: app quản lý chi tiêu (ghi giao dịch, ngân sách, hóa đơn, nhắc việc).
+Trả lời tin nhắn người dùng. Nếu phù hợp, gợi ý họ có thể: ghi chi tiêu ("cafe 45k"), đặt ngân sách, hỏi "tháng này chi bao nhiêu?".
 Phong cách bắt buộc: {self.TONE_PROMPTS.get(tone, self.TONE_PROMPTS["gentle"])}
-Chỉ trả lời bằng nội dung hội thoại, không JSON.
+Chỉ trả lời hội thoại thuần (1–3 câu), không JSON, không markdown.
 
 Tin nhắn người dùng: {message}
 """
         try:
-            response = httpx.post(
-                f"{settings.ollama_base_url}/api/generate",
-                json={
-                    "model": settings.ollama_llm_model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"num_predict": 80, "temperature": 0.4},
-                },
-                timeout=min(settings.ai_request_timeout, 8),
-            )
-            response.raise_for_status()
-            answer = response.json().get("response", "").strip()
+            answer = self.llm.generate_text(
+                prompt=prompt,
+                max_tokens=min(max(settings.ai_max_tokens, 120), 220),
+                temperature=0.4,
+                timeout=min(settings.ai_request_timeout, 20),
+            ).strip()
         except Exception:
             fallback_map = {
                 "gentle": "Mình đây. Bạn cứ nhắn tự nhiên như 'hôm qua ăn trưa 60k' hoặc 'đặt ngân sách ăn uống 3 triệu' nhé.",
@@ -487,18 +547,12 @@ Yêu cầu:
 - Chỉ trả về câu trả lời hoàn chỉnh bằng tiếng Việt.
 """
         try:
-            response = httpx.post(
-                f"{settings.ollama_base_url}/api/generate",
-                json={
-                    "model": settings.ollama_llm_model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"num_predict": 90, "temperature": 0.6},
-                },
+            styled = self.llm.generate_text(
+                prompt=prompt,
+                max_tokens=90,
+                temperature=0.6,
                 timeout=min(settings.ai_request_timeout, 6),
-            )
-            response.raise_for_status()
-            styled = response.json().get("response", "").strip()
+            ).strip()
             return styled or base_answer
         except Exception:
             if tone == "straight":
@@ -603,25 +657,20 @@ Yêu cầu:
 Bạn là trợ lý phân tích tài chính cá nhân.
 Hãy chuyển câu hỏi tiếng Việt thành duy nhất một câu SQL PostgreSQL dạng SELECT.
 Chỉ dùng bảng transactions với bí danh t.
-Các cột hợp lệ: id, user_id, family_id, type, amount, category, note, created_at.
-Luôn thêm điều kiện WHERE {scope_clause}.
+Các cột hợp lệ: type, amount, category, note, created_at.
+KHÔNG tự thêm điều kiện lọc theo user_id hoặc family_id và KHÔNG dùng tham số dạng :ten;
+hệ thống sẽ tự chèn điều kiện giới hạn theo người dùng.
 Không dùng INSERT, UPDATE, DELETE, DROP, ALTER.
 Chỉ trả về SQL, không giải thích.
 Câu hỏi: {question}
 """
         try:
-            response = httpx.post(
-                f"{settings.ollama_base_url}/api/generate",
-                json={
-                    "model": settings.ollama_llm_model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"num_predict": min(settings.ai_max_tokens, 180), "temperature": 0.1},
-                },
+            sql = self.llm.generate_text(
+                prompt=prompt,
+                max_tokens=min(settings.ai_max_tokens, 180),
+                temperature=0.1,
                 timeout=settings.ai_request_timeout,
-            )
-            response.raise_for_status()
-            sql = response.json().get("response", "").strip()
+            ).strip()
         except Exception:
             sql = ""
         return self._normalize_generated_sql(sql, question, scope_clause)
@@ -656,12 +705,36 @@ Câu hỏi: {question}
             return self._fallback_sql(question, scope_clause)
         if " from transactions" not in normalized:
             return self._fallback_sql(question, scope_clause)
-        if ":user_id" not in sql:
-            if " where " in normalized:
-                sql = f"{sql} AND {scope_clause}"
-            else:
-                sql = f"{sql} WHERE {scope_clause}"
+        # SECURITY: never trust the model to scope by user. Reject any model-supplied bind
+        # parameter or user_id/family_id reference, then always inject our own scope predicate
+        # ourselves. This prevents a tautology such as ":user_id = :user_id" (or a stray
+        # ":user_id" in the SELECT list) from bypassing tenant isolation and leaking other
+        # users' transactions.
+        if re.search(r"\b(user_id|family_id)\b", normalized) or re.search(r"(?<!:):[a-z_]\w*", normalized):
+            return self._fallback_sql(question, scope_clause)
+        sql = self._apply_scope_clause(sql, scope_clause)
+        if not re.search(r"\blimit\s+\d+\b", sql, flags=re.IGNORECASE):
+            sql = f"{sql} LIMIT {self.SAFE_SQL_MAX_ROWS}"
+        if not self._is_safe_select_sql(sql):
+            return self._fallback_sql(question, scope_clause)
         return sql
+
+    def _apply_scope_clause(self, sql: str, scope_clause: str) -> str:
+        # Insert the mandatory user-scope predicate before any trailing clause (GROUP BY /
+        # ORDER BY / HAVING / LIMIT / OFFSET) so it always constrains the result set,
+        # regardless of the shape of the model-generated query.
+        match = re.search(
+            r"\b(group\s+by|order\s+by|having|limit|offset|fetch\s+first)\b",
+            sql,
+            flags=re.IGNORECASE,
+        )
+        head = sql[: match.start()] if match else sql
+        tail = sql[match.start():] if match else ""
+        if re.search(r"\bwhere\b", head, flags=re.IGNORECASE):
+            head = f"{head.rstrip()} AND {scope_clause} "
+        else:
+            head = f"{head.rstrip()} WHERE {scope_clause} "
+        return (head + tail).strip()
 
     def _fallback_sql(self, question: str, scope_clause: str) -> str:
         q = question.lower()
@@ -687,9 +760,48 @@ Câu hỏi: {question}
         )
 
     def _run_safe_query(self, sql: str, *, current_user: User) -> list[dict]:
+        if not self._is_safe_select_sql(sql):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Câu truy vấn AI không hợp lệ.")
         params = {"user_id": current_user.id, "family_id": current_user.family_id}
         result = self.db.execute(text(sql), params)
         return [dict(row._mapping) for row in result]
+
+    def _is_safe_select_sql(self, sql: str) -> bool:
+        normalized = re.sub(r"\s+", " ", sql.strip().lower())
+        if not normalized.startswith("select "):
+            return False
+
+        forbidden_tokens = (
+            "--",
+            "/*",
+            "*/",
+            ";",
+            " union ",
+            " join ",
+            " with ",
+            " into ",
+            " execute ",
+            " copy ",
+            " pg_",
+            " information_schema",
+            " current_setting",
+            " pg_sleep",
+        )
+        if any(token in normalized for token in forbidden_tokens):
+            return False
+
+        if normalized.count(" from ") != 1:
+            return False
+        if not re.search(r"\bfrom\s+transactions(?:\s+t)?\b", normalized):
+            return False
+
+        aliases = re.findall(r"\b([a-z_]\w*)\.", normalized)
+        if any(alias != "t" for alias in aliases):
+            return False
+
+        if ":user_id" not in sql:
+            return False
+        return True
 
     def _summarize_rows(self, question: str, rows: list[dict], current_user: User, include_family: bool) -> str:
         summary = self.transaction_service.get_summary(current_user, include_family=include_family)

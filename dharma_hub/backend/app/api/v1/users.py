@@ -13,6 +13,24 @@ from app.services.crud import apply_list_query, get_or_404, utcnow
 
 router = APIRouter(prefix="/users", tags=["users"])
 
+# Fields that grant privileges / change account standing. Holding "users.update" is NOT enough
+# to set these — only a super admin may, otherwise any account with the permission (e.g. the
+# Editor role) could promote itself to super admin or grant itself roles.
+_PRIVILEGED_USER_FIELDS = {"is_super_admin", "is_active", "is_locked"}
+
+
+def _forbid_managing_super_admin(actor: User, target: User) -> None:
+    if target.is_super_admin and not actor.is_super_admin:
+        raise HTTPException(status_code=403, detail="Không thể thao tác trên tài khoản Super Admin.")
+
+
+def _forbid_privilege_escalation(actor: User, target: User, data: dict, role_ids) -> None:
+    if actor.is_super_admin:
+        return
+    if bool(_PRIVILEGED_USER_FIELDS & set(data.keys())) or role_ids is not None:
+        raise HTTPException(status_code=403, detail="Chỉ Super Admin mới được đổi quyền, trạng thái hoặc vai trò người dùng.")
+    _forbid_managing_super_admin(actor, target)
+
 
 @router.get("", response_model=Page[UserOut])
 def list_users(
@@ -59,6 +77,7 @@ def update_user(user_id: int, payload: UserUpdate, request: Request, db: Session
     before = safe_snapshot(user)
     data = payload.model_dump(exclude_unset=True)
     role_ids = data.pop("role_ids", None)
+    _forbid_privilege_escalation(actor, user, data, role_ids)
     for k, v in data.items():
         setattr(user, k, v)
     if role_ids is not None:
@@ -73,6 +92,7 @@ def update_user(user_id: int, payload: UserUpdate, request: Request, db: Session
 @router.post("/{user_id}/reset-password", response_model=Message)
 def reset_password(user_id: int, payload: ResetPasswordRequest, request: Request, db: Session = Depends(get_db), actor: User = Depends(require_permission("users.update"))):
     user = get_or_404(db, User, user_id)
+    _forbid_managing_super_admin(actor, user)
     user.hashed_password = hash_password(payload.password)
     user.updated_by = actor.id
     write_audit(db, action="update", module="users", entity_id=user.id, actor=actor, summary=f"Đặt lại mật khẩu {user.email}", request=request)
@@ -83,6 +103,7 @@ def reset_password(user_id: int, payload: ResetPasswordRequest, request: Request
 @router.post("/{user_id}/lock", response_model=UserOut)
 def lock_user(user_id: int, request: Request, db: Session = Depends(get_db), actor: User = Depends(require_permission("users.update"))):
     user = get_or_404(db, User, user_id)
+    _forbid_managing_super_admin(actor, user)
     before = safe_snapshot(user)
     user.is_locked = True
     write_audit(db, action="update", module="users", entity_id=user.id, actor=actor, before=before, after=safe_snapshot(user), summary=f"Khóa {user.email}", request=request)
@@ -93,6 +114,7 @@ def lock_user(user_id: int, request: Request, db: Session = Depends(get_db), act
 @router.post("/{user_id}/unlock", response_model=UserOut)
 def unlock_user(user_id: int, request: Request, db: Session = Depends(get_db), actor: User = Depends(require_permission("users.update"))):
     user = get_or_404(db, User, user_id)
+    _forbid_managing_super_admin(actor, user)
     before = safe_snapshot(user)
     user.is_locked = False
     write_audit(db, action="update", module="users", entity_id=user.id, actor=actor, before=before, after=safe_snapshot(user), summary=f"Mở khóa {user.email}", request=request)
@@ -103,6 +125,7 @@ def unlock_user(user_id: int, request: Request, db: Session = Depends(get_db), a
 @router.delete("/{user_id}", response_model=Message)
 def delete_user(user_id: int, request: Request, db: Session = Depends(get_db), actor: User = Depends(require_permission("users.delete"))):
     user = get_or_404(db, User, user_id)
+    _forbid_managing_super_admin(actor, user)
     before = safe_snapshot(user)
     user.is_deleted = True
     user.deleted_at = utcnow()

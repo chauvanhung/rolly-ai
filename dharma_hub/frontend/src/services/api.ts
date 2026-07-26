@@ -5,27 +5,36 @@ export const getApiUrl = () => {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
-  // Fallback to absolute local url in browser or server-side docker address
+  // Server-side trong Docker phatgiao (tên container dharma-backend)
   if (isServer) {
-    return "http://backend:8000/api/v1";
+    return process.env.SEO_API_URL?.replace(/\/$/, "") || "http://dharma-backend:8000/api/v1";
   }
   // Browser relative proxy
   return "/api/v1";
 };
 
-export const getToken = (): string => {
-  if (isServer) return "";
-  return localStorage.getItem("dharma_token") || "";
+// The session token now lives in an HttpOnly cookie set by the backend — it is intentionally NOT
+// readable from JS, so getToken() no longer returns it. Auth rides the cookie (credentials:include).
+export const getToken = (): string => "";
+
+export const setToken = (_token?: string) => {
+  if (isServer) return;
+  // Clean up any legacy plaintext token persisted by older builds (an XSS-exfiltration risk).
+  localStorage.removeItem("dharma_token");
 };
 
-export const setToken = (token: string) => {
-  if (isServer) return;
-  if (token) {
-    localStorage.setItem("dharma_token", token);
-  } else {
-    localStorage.removeItem("dharma_token");
-  }
-};
+const CSRF_COOKIE = "dharma_csrf";
+const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function readCookie(name: string): string {
+  if (isServer || typeof document === "undefined") return "";
+  const target = `${name}=`;
+  const hit = document.cookie
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(target));
+  return hit ? decodeURIComponent(hit.slice(target.length)) : "";
+}
 
 export class ApiError extends Error {
   status: number;
@@ -38,17 +47,19 @@ export class ApiError extends Error {
 export async function api(path: string, options: RequestInit = {}) {
   const url = `${getApiUrl()}${path}`;
   const headers = new Headers(options.headers || {});
-  
-  const token = getToken();
-  if (token && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-  
+
   if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
 
-  const res = await fetch(url, { ...options, headers });
+  // Double-submit CSRF token for unsafe methods (cookie auth is sent automatically).
+  const method = (options.method || "GET").toUpperCase();
+  if (UNSAFE_METHODS.has(method) && !headers.has("X-CSRF-Token")) {
+    const csrf = readCookie(CSRF_COOKIE);
+    if (csrf) headers.set("X-CSRF-Token", csrf);
+  }
+
+  const res = await fetch(url, { ...options, credentials: "include", headers });
   
   if (res.status === 204) {
     return null;
@@ -138,7 +149,16 @@ export const me = async (): Promise<any> => {
   return await api("/auth/me");
 };
 
+export const logout = async (): Promise<void> => {
+  try {
+    await api("/auth/logout", { method: "POST" });
+  } catch {
+    // ignore — clearing local state is enough for the UI
+  }
+};
+
+// Export links are same-origin GETs; the HttpOnly cookie is sent automatically, so we no longer
+// put the token in the query string (which leaked it into logs / history).
 export const exportUrl = (path: string): string => {
-  const token = getToken();
-  return `${getApiUrl()}${path}?authorization=${encodeURIComponent("Bearer " + token)}`;
+  return `${getApiUrl()}${path}`;
 };

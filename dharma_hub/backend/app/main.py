@@ -56,10 +56,51 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 
 
+def _ensure_schema_columns() -> None:
+    """Thêm cột mới cho DB đã tồn tại (create_all không ALTER)."""
+    from sqlalchemy import text
+
+    statements = [
+        "ALTER TABLE sutras ADD COLUMN IF NOT EXISTS video_url VARCHAR(600)",
+    ]
+    with engine.begin() as conn:
+        for sql in statements:
+            try:
+                conn.execute(text(sql))
+            except Exception:
+                # SQLite cũ / dialect khác: thử không IF NOT EXISTS
+                try:
+                    conn.execute(text("ALTER TABLE sutras ADD COLUMN video_url VARCHAR(600)"))
+                except Exception:
+                    pass
+
+
+_UNSAFE_INLINE_PREFIXES = ("image/svg", "text/html", "application/xhtml", "text/xml", "application/xml")
+
+
+class _UploadStaticFiles(StaticFiles):
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers.setdefault("X-Content-Type-Options", "nosniff")
+            content_type = response.headers.get("content-type", "").lower()
+            # Force download (never inline-execute) for types that can run script — protects
+            # against any SVG/HTML already stored from before .svg was blocklisted.
+            if any(content_type.startswith(p) for p in _UNSAFE_INLINE_PREFIXES):
+                response.headers["Content-Disposition"] = "attachment"
+        return response
+
+
 @app.on_event("startup")
 def on_startup() -> None:
+    if settings.app_env.lower() in {"production", "prod"} and settings.jwt_secret == "change-me-phatgiao":
+        raise RuntimeError(
+            "JWT_SECRET vẫn là giá trị mặc định trong môi trường production. "
+            "Đặt JWT_SECRET mạnh trước khi khởi động."
+        )
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
+    _ensure_schema_columns()
     db = SessionLocal()
     try:
         from app.services.seed import run_seed
@@ -73,7 +114,7 @@ def health():
     return {"status": "ok", "app": settings.app_name}
 
 
-app.mount("/api/uploads", StaticFiles(directory=settings.upload_dir, check_dir=False), name="uploads")
+app.mount("/api/uploads", _UploadStaticFiles(directory=settings.upload_dir, check_dir=False), name="uploads")
 app.include_router(auth_router, prefix=settings.api_prefix)
 app.include_router(sutras_router, prefix=settings.api_prefix)
 app.include_router(users_router, prefix=settings.api_prefix)

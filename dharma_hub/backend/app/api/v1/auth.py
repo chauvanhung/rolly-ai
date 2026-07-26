@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode, urlparse, urljoin
 
 import requests
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt
 from pydantic import BaseModel, EmailStr, Field
@@ -14,7 +14,7 @@ from google.oauth2 import id_token
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.db import get_db
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import clear_auth_cookies, create_access_token, hash_password, set_auth_cookies, verify_password
 from app.models import User
 from app.schemas.auth import LoginRequest, TokenResponse, UserOut
 from app.services.audit import write_audit
@@ -139,7 +139,7 @@ def _issue_session_for_google_profile(
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
+def login(payload: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)) -> TokenResponse:
     from app.core.rate_limit import enforce_rate_limit
 
     enforce_rate_limit(request, scope="auth_login", limit=20, window_seconds=60)
@@ -151,6 +151,7 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
     token = create_access_token(str(user.id), {"email": user.email})
     write_audit(db, action="login", module="auth", entity_id=user.id, actor=user, summary="Đăng nhập", request=request)
     db.commit()
+    set_auth_cookies(response, token)
     return TokenResponse(access_token=token)
 
 
@@ -192,24 +193,56 @@ def google_connect(
     return GoogleConnectResponse(auth_url=f"{GOOGLE_AUTH_URL}?{query}", enabled=True)
 
 
+def _redirect_google_error(return_url: str, message: str) -> RedirectResponse:
+    """Đưa lỗi OAuth về FE (login/register) thay vì JSON thô."""
+    from urllib.parse import quote
+
+    base = _sanitize_return_url(return_url)
+    sep = "&" if urlparse(base).query else "?"
+    dest = f"{base}{sep}google_error={quote(message, safe='')}"
+    return RedirectResponse(url=dest, status_code=302)
+
+
 @router.get("/google/callback", name="google_auth_callback")
 def google_callback(
     request: Request,
     db: Session = Depends(get_db),
-    code: str = Query(..., min_length=1),
-    state: str = Query(..., min_length=1),
+    code: str | None = Query(default=None),
+    state: str | None = Query(default=None),
+    error: str | None = Query(default=None),
+    error_description: str | None = Query(default=None),
 ):
     """Nhận code từ Google, tạo JWT, redirect về frontend (giống app)."""
+    # State decode sớm để biết return_url khi Google trả error
+    return_url_fallback = (settings.frontend_base_url or "https://phatgiao.rollyhub.com").rstrip("/") + "/login"
+    state_return = return_url_fallback
+    if state:
+        try:
+            state_payload_preview = jwt.decode(
+                state, settings.jwt_secret, algorithms=[settings.jwt_algorithm], options={"verify_exp": False}
+            )
+            state_return = _sanitize_return_url(state_payload_preview.get("return_url"))
+        except JWTError:
+            pass
+
+    if error:
+        msg = error_description or error or "Google từ chối đăng nhập."
+        print(f"[auth/google/callback] google error: {msg}", flush=True)
+        return _redirect_google_error(state_return, msg)
+
+    if not code or not state:
+        return _redirect_google_error(state_return, "Thiếu mã xác thực Google (code/state).")
+
     if not _google_configured_redirect():
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Google OAuth chưa cấu hình.")
+        return _redirect_google_error(state_return, "Google OAuth chưa cấu hình trên server.")
 
     try:
         state_payload = jwt.decode(state, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-    except JWTError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Google state không hợp lệ.") from exc
+    except JWTError:
+        return _redirect_google_error(state_return, "Phiên Google hết hạn. Vui lòng bấm đăng nhập lại.")
 
     if state_payload.get("purpose") != GOOGLE_STATE_PURPOSE:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Google state không hợp lệ.")
+        return _redirect_google_error(state_return, "Google state không hợp lệ.")
 
     return_url = _sanitize_return_url(state_payload.get("return_url"))
     redirect_uri = _resolve_redirect_uri(request)
@@ -231,16 +264,17 @@ def google_callback(
     except requests.HTTPError as exc:
         detail = exc.response.text if exc.response is not None else "Google token exchange failed."
         print(f"[auth/google/callback] exchange failed: {detail}", flush=True)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Đổi mã Google thất bại. Kiểm tra Authorized redirect URIs trùng GOOGLE_AUTH_REDIRECT_URI.",
-        ) from exc
-    except requests.RequestException as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Không kết nối được tới Google.") from exc
+        return _redirect_google_error(
+            return_url,
+            "Đổi mã Google thất bại. Kiểm tra Authorized redirect URIs = "
+            f"{redirect_uri}",
+        )
+    except requests.RequestException:
+        return _redirect_google_error(return_url, "Không kết nối được tới Google.")
 
     access = token_payload.get("access_token")
     if not access:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Google không trả access_token.")
+        return _redirect_google_error(return_url, "Google không trả access_token.")
 
     try:
         profile_res = requests.get(
@@ -250,32 +284,39 @@ def google_callback(
         )
         profile_res.raise_for_status()
         profile = profile_res.json()
-    except requests.RequestException as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Không lấy được hồ sơ Google.") from exc
+    except requests.RequestException:
+        return _redirect_google_error(return_url, "Không lấy được hồ sơ Google.")
 
     email = str(profile.get("email") or "").lower().strip()
     if not email:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Google không trả về email.")
+        return _redirect_google_error(return_url, "Google không trả về email.")
     if profile.get("verified_email") is False:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Email Google chưa được xác minh.")
+        return _redirect_google_error(return_url, "Email Google chưa được xác minh.")
 
-    app_token = _issue_session_for_google_profile(
-        db,
-        request,
-        email=email,
-        full_name=str(profile.get("name") or email).strip(),
-        avatar_url=profile.get("picture"),
-        summary="Đăng nhập Google (OAuth redirect)",
-    )
+    try:
+        app_token = _issue_session_for_google_profile(
+            db,
+            request,
+            email=email,
+            full_name=str(profile.get("name") or email).strip(),
+            avatar_url=profile.get("picture"),
+            summary="Đăng nhập/đăng ký Google (OAuth redirect)",
+        )
+    except HTTPException as exc:
+        msg = exc.detail if isinstance(exc.detail, str) else "Không tạo được phiên đăng nhập."
+        return _redirect_google_error(return_url, msg)
 
-    # Đưa token về frontend qua query; FE lưu localStorage rồi xóa khỏi URL
-    sep = "&" if urlparse(return_url).query else "?"
-    dest = f"{return_url}{sep}access_token={app_token}&google=1"
-    return RedirectResponse(url=dest, status_code=302)
+    # SECURITY: set the token as an HttpOnly cookie server-side and redirect WITHOUT any token in
+    # the URL at all (no query, no fragment). The token never reaches JS, logs, or Referer headers.
+    # FE sees `#google=1` and calls /auth/me (cookie) to load the session.
+    base = return_url.split("#", 1)[0]
+    resp = RedirectResponse(url=f"{base}#google=1", status_code=302)
+    set_auth_cookies(resp, app_token)
+    return resp
 
 
 @router.post("/google", response_model=TokenResponse)
-def google_login(payload: GoogleLoginRequest, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
+def google_login(payload: GoogleLoginRequest, request: Request, response: Response, db: Session = Depends(get_db)) -> TokenResponse:
     """GIS One Tap / button credential (kiểu eat) — cần Authorized JavaScript origins."""
     if not settings.google_client_id:
         raise HTTPException(
@@ -317,6 +358,7 @@ def google_login(payload: GoogleLoginRequest, request: Request, db: Session = De
         avatar_url=info.get("picture"),
         summary="Đăng nhập Google (GIS credential)",
     )
+    set_auth_cookies(response, token)
     return TokenResponse(access_token=token)
 
 
@@ -355,3 +397,9 @@ def register(payload: RegisterRequest, request: Request, db: Session = Depends(g
 @router.get("/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)) -> UserOut:
     return serialize_user(current_user)
+
+
+@router.post("/logout")
+def logout(response: Response) -> dict:
+    clear_auth_cookies(response)
+    return {"ok": True}

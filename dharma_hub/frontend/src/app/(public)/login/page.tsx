@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AppContext";
-import { login as apiLogin, me, getApiUrl, setToken } from "@/services/api";
+import { login as apiLogin, me, getApiUrl } from "@/services/api";
 import { Lock, Mail, Loader2, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
@@ -18,13 +18,24 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [bootstrappingGoogle, setBootstrappingGoogle] = useState(true);
 
-  // Handle OAuth redirect return: ?access_token=...&google=1 (same pattern as app callback → FE)
+  // Handle OAuth redirect return: ?access_token=...&google=1 hoặc ?google_error=...
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("access_token");
-    const fromGoogle = params.get("google");
-    if (!token || fromGoogle !== "1") {
+    const search = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(
+      window.location.hash.startsWith("#") ? window.location.hash.slice(1) : ""
+    );
+    const googleErr = search.get("google_error");
+    if (googleErr) {
+      setError(decodeURIComponent(googleErr));
+      setBootstrappingGoogle(false);
+      window.history.replaceState({}, "", "/login");
+      return;
+    }
+    // OAuth callback now sets an HttpOnly cookie server-side and returns only `#google=1` — no
+    // token in the URL. We just detect the flag and load the session via /auth/me (cookie).
+    const fromGoogle = hash.get("google") || search.get("google");
+    if (fromGoogle !== "1") {
       setBootstrappingGoogle(false);
       return;
     }
@@ -32,11 +43,9 @@ export default function LoginPage() {
     let cancelled = false;
     (async () => {
       try {
-        setToken(token);
         const userData = await me();
         if (cancelled) return;
-        loginUser(token, userData);
-        // Clean token from address bar
+        loginUser("", userData);
         window.history.replaceState({}, "", "/login");
       } catch (err: unknown) {
         if (!cancelled) {

@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from app.ratelimit import enforce as rate_limit
 from app.agent.intent_detector import detect_intent
 from app.agent.orchestrator import handle_query
 from app.automation.scheduler import get_scheduler, list_jobs_payload, schedule_daily_report
@@ -47,7 +48,8 @@ class ScheduleRequest(BaseModel):
 
 
 @router.post("/ask", response_model=AskResponse)
-async def ask(request: AskRequest) -> AskResponse:
+async def ask(request: AskRequest, http_request: Request) -> AskResponse:
+    rate_limit(http_request, "ask", limit=20, window_seconds=60)
     try:
         intent, _confidence = detect_intent(request.message)
         answer = await handle_query(request.message)
@@ -75,7 +77,8 @@ async def status() -> StatusResponse:
 
 
 @router.post("/ingest")
-async def ingest() -> dict[str, str]:
+async def ingest(http_request: Request) -> dict[str, str]:
+    rate_limit(http_request, "ingest", limit=2, window_seconds=300)
     store = get_vector_store()
     ok = store.build_from_documents()
     if ok and store.index is not None:
@@ -90,5 +93,6 @@ async def jobs() -> dict[str, object]:
 
 
 @router.post("/schedule")
-async def schedule(request: ScheduleRequest) -> dict[str, str]:
+async def schedule(request: ScheduleRequest, http_request: Request) -> dict[str, str]:
+    rate_limit(http_request, "schedule", limit=5, window_seconds=300)
     return {"status": "success", "message": schedule_daily_report(request.hour, request.minute)}

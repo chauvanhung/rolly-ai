@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { setToken, getToken, me as fetchMe } from "../services/api";
+import { setToken, me as fetchMe, logout as apiLogout } from "../services/api";
 
 // --- Theme Context ---
 type Theme = "light" | "dark";
@@ -75,18 +75,13 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     setFontSize(size);
     applyFontSize(size);
 
-    const token = getToken();
-    if (token) {
-      fetchMe()
-        .then((userData) => setUser(userData))
-        .catch(() => {
-          setToken("");
-          setUser(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    // Session now lives in an HttpOnly cookie. Drop any legacy localStorage token, then verify the
+    // session via /auth/me (the cookie is sent automatically with credentials: "include").
+    setToken("");
+    fetchMe()
+      .then((userData) => setUser(userData))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
   }, []);
 
   const toggleTheme = () => {
@@ -126,18 +121,17 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const logoutUser = useCallback(() => {
+    apiLogout(); // clear the backend HttpOnly cookie (fire-and-forget)
     setToken("");
     setUser(null);
   }, []);
 
   const refreshUser = useCallback(async () => {
-    if (getToken()) {
-      try {
-        const u = await fetchMe();
-        setUser(u);
-      } catch {
-        logoutUser();
-      }
+    try {
+      const u = await fetchMe();
+      setUser(u);
+    } catch {
+      logoutUser();
     }
   }, [logoutUser]);
 

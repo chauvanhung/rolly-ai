@@ -7,6 +7,7 @@ from app.models import Permission, Role, User
 MODULES = [
     "sutras", "dharma_talks", "lectures", "teachers", "events", "retreats",
     "charity_programs", "news_posts", "media_assets", "users", "roles", "categories", "tags",
+    "content_modules",
     "contact_messages", "subscribers",
 ]
 ACTIONS = ["view", "create", "update", "delete", "restore", "approve", "publish", "export"]
@@ -52,7 +53,13 @@ def ensure_permissions_and_roles(db: Session) -> None:
         admin_role.permissions = all_perms
         changed = True
     if not editor_role.permissions:
-        editor_role.permissions = [p for p in all_perms if p.action in {"view", "create", "update", "approve", "publish", "export"}]
+        # Editors manage content only — never user/role administration (would allow self-escalation).
+        editor_denied_modules = {"users", "roles"}
+        editor_role.permissions = [
+            p for p in all_perms
+            if p.action in {"view", "create", "update", "approve", "publish", "export"}
+            and p.module not in editor_denied_modules
+        ]
         changed = True
     if not viewer_role.permissions:
         viewer_role.permissions = [p for p in all_perms if p.action in {"view", "export"}]

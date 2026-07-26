@@ -3,14 +3,16 @@ News Hub API - aggregates trending Vietnamese news from public RSS feeds.
 """
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.ratelimit import enforce as rate_limit
 from app.aggregator import cache_info, refresh_articles
 from app.sources import TOPICS
 from app.trending import hot_keywords, record_search, top_searches
 from app.google_trends import refresh_search_trends
 from app.topic_trends import refresh_topic_trends, topic_trends_status
+from app.traffic import refresh_traffic, traffic_status
 
 app = FastAPI(title="News Hub API", version="1.1.0")
 
@@ -31,6 +33,21 @@ async def health() -> dict[str, str]:
 async def trends_status() -> dict[str, object]:
     """Diagnostics: last fetch time and item counts for topic trends."""
     return topic_trends_status()
+
+
+@app.get("/api/traffic")
+async def traffic(
+    city: str | None = Query(default=None, max_length=60),
+    limit: int = Query(default=30, ge=1, le=60),
+) -> dict[str, object]:
+    """Traffic-incident articles: jams, accidents, closures, flooded roads."""
+    items = await refresh_traffic(city=city, limit=limit)
+    return {"city": city, "count": len(items), "items": items}
+
+
+@app.get("/api/traffic-status")
+async def traffic_status_endpoint() -> dict[str, object]:
+    return traffic_status()
 
 
 @app.get("/api/topics")
@@ -90,6 +107,7 @@ async def search(
 
 
 @app.post("/api/refresh")
-async def refresh() -> dict[str, object]:
+async def refresh(request: Request) -> dict[str, object]:
+    rate_limit(request, "refresh", limit=5, window_seconds=60)
     articles = await refresh_articles(force=True)
     return {"refreshed": True, "count": len(articles), "cache": cache_info()}

@@ -11,6 +11,7 @@ from app.models import (
     AuditLog,
     Category,
     CharityProgram,
+    ContentModule,
     DharmaTalk,
     Event,
     Lecture,
@@ -72,7 +73,28 @@ def create_generic_router(*, module: str, model, label: str, search_fields: list
 
     @router.post("", response_model=GenericItem, status_code=201)
     def create_item(payload: GenericPayload, request: Request, db: Session = Depends(get_db), actor: User = Depends(require_permission(f"{module}.create"))):
+        from app.services.modules import ensure_content_module, normalize_module_code
+
         data = {k: v for k, v in payload.data.items() if k in allowed_fields}
+
+        # ContentModule: chuẩn hoá code + mặc định hiện menu
+        if model is ContentModule:
+            raw_code = data.get("code") or data.get("name") or ""
+            data["code"] = normalize_module_code(str(raw_code))
+            data.setdefault("is_active", True)
+            data.setdefault("show_in_nav", True)
+            data.setdefault("content_kind", "sutra_like")
+            data.setdefault("is_system", False)
+            if not data.get("public_path"):
+                c = data["code"]
+                data["public_path"] = "/mantras" if c == "mantras" else ("/sutras" if c == "sutras" else f"/m/{c}")
+
+        # Category: nếu module chưa có → tự tạo ContentModule (hiện menu ngoài)
+        if model is Category and data.get("module"):
+            mod_code = normalize_module_code(str(data["module"]))
+            data["module"] = mod_code
+            ensure_content_module(db, mod_code, name=data.get("name") or mod_code, show_in_nav=True)
+
         obj = model()
         for k, v in data.items():
             setattr(obj, k, v)
@@ -116,9 +138,20 @@ def create_generic_router(*, module: str, model, label: str, search_fields: list
 
     @router.patch("/{item_id}", response_model=GenericItem)
     def update_item(item_id: int, payload: GenericPayload, request: Request, db: Session = Depends(get_db), actor: User = Depends(require_permission(f"{module}.update"))):
+        from app.services.modules import ensure_content_module, normalize_module_code
+
         obj = get_or_404(db, model, item_id)
         before = safe_snapshot(obj)
         data = {k: v for k, v in payload.data.items() if k in allowed_fields}
+        if model is ContentModule and getattr(obj, "is_system", False):
+            data.pop("code", None)  # không đổi mã module hệ thống
+            data["is_system"] = True
+        if model is ContentModule and "code" in data:
+            data["code"] = normalize_module_code(str(data["code"]))
+        if model is Category and data.get("module"):
+            mod_code = normalize_module_code(str(data["module"]))
+            data["module"] = mod_code
+            ensure_content_module(db, mod_code, name=data.get("name") or getattr(obj, "name", mod_code), show_in_nav=True)
         if slug_field and hasattr(model, "slug") and ("slug" in data or "title" in data or "name" in data):
             title = data.get("title") or data.get("name") or getattr(obj, "title", getattr(obj, "name", label))
             obj.slug = unique_slug(db, model, title, data.get("slug"), exclude_id=obj.id)
@@ -215,11 +248,6 @@ def create_generic_router(*, module: str, model, label: str, search_fields: list
             import uuid
             from pathlib import Path
 
-            # ~80MB soft limit (Cloudflare free ~100MB; keep headroom)
-            max_bytes = int(getattr(settings, "max_upload_size_mb", 20) or 20) * 1024 * 1024
-            # For audio/pdf allow up to 80MB regardless of default 20 if configured low
-            max_bytes = max(max_bytes, 80 * 1024 * 1024)
-
             original = (file.filename or "upload.bin").strip() or "upload.bin"
             safe_stem = re.sub(r"[^a-zA-Z0-9._-]+", "-", Path(original).stem).strip("-")[:80] or "file"
             ext = Path(original).suffix.lower()[:16]
@@ -230,8 +258,9 @@ def create_generic_router(*, module: str, model, label: str, search_fields: list
 
             # Strict file extension validation for security (preventing virus/scripts upload)
             allowed_extensions = {
-                # Images
-                ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico",
+                # Images — NOTE: .svg intentionally excluded. SVGs are served as image/svg+xml
+                # and can carry inline <script>, enabling stored XSS / token theft.
+                ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".ico",
                 # Audio
                 ".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac",
                 # Video
@@ -244,6 +273,17 @@ def create_generic_router(*, module: str, model, label: str, search_fields: list
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Định dạng tệp {ext} không được phép tải lên hệ thống bảo mật."
                 )
+
+            # Size limits: PDF kinh dài (hàng trăm trang) cho phép lớn hơn
+            base_mb = int(getattr(settings, "max_upload_size_mb", 80) or 80)
+            pdf_mb = int(getattr(settings, "max_pdf_upload_size_mb", 250) or 250)
+            if ext == ".pdf":
+                max_mb = max(base_mb, pdf_mb, 250)
+            elif ext in {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac", ".mp4", ".webm", ".mov"}:
+                max_mb = max(base_mb, 80)
+            else:
+                max_mb = max(base_mb, 20)
+            max_bytes = max_mb * 1024 * 1024
 
             file_name = f"{safe_stem}-{uuid.uuid4().hex[:10]}{ext}"
             file_path = os.path.join(settings.upload_dir, file_name)
@@ -263,9 +303,10 @@ def create_generic_router(*, module: str, model, label: str, search_fields: list
                                 os.remove(file_path)
                             except OSError:
                                 pass
+                            hint = "Nén PDF (OCR/giảm DPI) hoặc chia nhiều tập." if ext == ".pdf" else "Nén file hoặc cắt ngắn hơn."
                             raise HTTPException(
                                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                                detail=f"File quá lớn (tối đa {max_bytes // (1024 * 1024)}MB). Hãy nén MP3 hoặc cắt ngắn hơn.",
+                                detail=f"File quá lớn (tối đa {max_mb}MB). {hint}",
                             )
                         out.write(chunk)
             except HTTPException:
@@ -347,6 +388,17 @@ RETREAT_FIELDS = EVENT_FIELDS | {"schedule_json", "teacher_id"}
 CHARITY_FIELDS = {"title", "slug", "description", "progress_note", "report", "images_json", "documents_json", "total_income", "total_expense", "program_status", "cover_url", "status"}
 MEDIA_FIELDS = {"file_name", "title", "description", "kind", "mime_type", "url", "size_bytes", "folder", "tags_csv"}
 CATEGORY_FIELDS = {"name", "slug", "description", "module", "parent_id", "sort_order"}
+CONTENT_MODULE_FIELDS = {
+    "code",
+    "name",
+    "description",
+    "content_kind",
+    "is_system",
+    "is_active",
+    "show_in_nav",
+    "sort_order",
+    "public_path",
+}
 TAG_FIELDS = {"name", "slug"}
 ROLE_FIELDS = {"name", "slug", "description"}
 CONTACT_FIELDS = {"full_name", "email", "phone", "subject", "body", "is_read"}
@@ -362,6 +414,14 @@ routers = [
     create_generic_router(module="news_posts", model=NewsPost, label="tin tức/thông báo", search_fields=["title", "excerpt", "body"], allowed_fields=TEXT_CONTENT_FIELDS),
     create_generic_router(module="media_assets", model=MediaAsset, label="media", search_fields=["file_name", "title", "description", "tags_csv"], allowed_fields=MEDIA_FIELDS, slug_field=False),
     create_generic_router(module="categories", model=Category, label="danh mục", search_fields=["name", "description", "module"], allowed_fields=CATEGORY_FIELDS),
+    create_generic_router(
+        module="content_modules",
+        model=ContentModule,
+        label="module nội dung",
+        search_fields=["code", "name", "description", "content_kind"],
+        allowed_fields=CONTENT_MODULE_FIELDS,
+        slug_field=False,
+    ),
     create_generic_router(module="tags", model=Tag, label="thẻ", search_fields=["name", "slug"], allowed_fields=TAG_FIELDS),
     create_generic_router(module="roles", model=Role, label="vai trò", search_fields=["name", "description"], allowed_fields=ROLE_FIELDS),
     create_generic_router(module="contact_messages", model=ContactMessage, label="tin nhắn liên hệ", search_fields=["full_name", "email", "subject", "body"], allowed_fields=CONTACT_FIELDS, slug_field=False),
