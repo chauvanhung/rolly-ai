@@ -18,7 +18,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [bootstrappingGoogle, setBootstrappingGoogle] = useState(true);
 
-  // Handle OAuth redirect return: ?access_token=...&google=1 hoặc ?google_error=...
+  // Handle OAuth redirect return: token is set as an HttpOnly cookie by the backend; URL only
+  // carries `#google=1` (success) or `?google_error=...` (failure).
   useEffect(() => {
     if (typeof window === "undefined") return;
     const search = new URLSearchParams(window.location.search);
@@ -114,8 +115,12 @@ export default function LoginPage() {
   };
 
   if (bootstrappingGoogle && typeof window !== "undefined") {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("access_token") && params.get("google") === "1") {
+    const search = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(
+      window.location.hash.startsWith("#") ? window.location.hash.slice(1) : ""
+    );
+    // OAuth callback now returns `#google=1` (token is in the HttpOnly cookie, not the URL).
+    if ((hash.get("google") || search.get("google")) === "1") {
       return (
         <div className="mx-auto max-w-md px-4 py-20 text-center text-sm text-muted">
           <Loader2 className="mx-auto mb-3 animate-spin text-primary" size={24} />
