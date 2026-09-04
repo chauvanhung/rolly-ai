@@ -713,6 +713,8 @@ a, button, .btn, .tab-btn, .client-card, .stat-card, .dropzone, .toggle-switch, 
   border-radius: var(--radius-lg);
   padding: 20px;
   transition: all var(--transition-normal);
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .client-card:hover {
@@ -724,7 +726,8 @@ a, button, .btn, .tab-btn, .client-card, .stat-card, .dropzone, .toggle-switch, 
 .client-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 12px;
   margin-bottom: 12px;
 }
 
@@ -733,14 +736,33 @@ a, button, .btn, .tab-btn, .client-card, .stat-card, .dropzone, .toggle-switch, 
   color: var(--accent-indigo);
   font-weight: 700;
   font-size: 13px;
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  word-break: break-word;
+  line-height: 1.4;
+  flex: 1;
+}
+
+code, .client-card code {
+  font-family: 'Fira Code', Consolas, Monaco, monospace;
+  font-size: 12px;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  display: inline-block;
+  max-width: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: #a5b4fc;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .client-templates-list {
   font-size: 13px;
   color: var(--text-secondary);
   margin-top: 10px;
+  word-break: break-all;
 }
 
 .client-templates-list li {
