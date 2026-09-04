@@ -628,6 +628,31 @@ select.form-control {
   font-weight: bold;
 }
 
+/* UI UX Pro Max Utility Enhancements */
+a, button, .btn, .tab-btn, .client-card, .stat-card, .dropzone, .toggle-switch, .select-role-styled, .btn-act, .file-preview-remove, .field-chip, .nav-tab {
+  cursor: pointer;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--accent-indigo);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.5);
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
