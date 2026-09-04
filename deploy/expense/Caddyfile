@@ -46,6 +46,23 @@
   }
 }
 
+(word_csp) {
+  header {
+    Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' data: https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://word.rollyhub.com ws: wss:; form-action 'self'; manifest-src 'self'; worker-src 'self' blob:"
+  }
+}
+
+http://word.rollyhub.com {
+  encode gzip zstd
+  import shared_security_headers
+  import word_csp
+
+  handle {
+    reverse_proxy host.docker.internal:5055
+  }
+}
+
+
 
 http://phatgiao.rollyhub.com {
   encode gzip zstd
