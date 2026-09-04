@@ -179,6 +179,24 @@ def delete_user(db_path: Path, user_id: int, current_admin_id: int | None = None
     return True, "Đã xóa tài khoản thành công."
 
 
+def admin_change_user_role(db_path: Path, user_id: int, new_role: str, current_admin_id: int | None = None) -> tuple[bool, str]:
+    if new_role not in ("admin", "user"):
+        return False, "Vai trò không hợp lệ. Chỉ chấp nhận 'admin' hoặc 'user'."
+    if current_admin_id and user_id == current_admin_id and new_role == "user":
+        return False, "Không thể tự hạ quyền Admin của chính tài khoản đang đăng nhập."
+    with sqlite3.connect(db_path, timeout=30.0) as conn:
+        conn.row_factory = sqlite3.Row
+        target = conn.execute("SELECT email, role FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not target:
+            return False, "Tài khoản không tồn tại."
+        if target["email"].lower() == ADMIN_EMAIL and new_role == "user":
+            return False, "Không thể hạ quyền Quản trị viên tối cao (chauvanhung1999@gmail.com)."
+        conn.execute("UPDATE users SET role = ? WHERE id = ?", (new_role, user_id))
+    role_label = "Quản trị viên (Admin)" if new_role == "admin" else "Người dùng (User)"
+    return True, f"Đã cập nhật vai trò tài khoản thành {role_label}."
+
+
+
 def get_or_create_google_user(
     db_path: Path, google_id: str, email: str, full_name: str = "", avatar_url: str = ""
 ) -> dict:

@@ -26,6 +26,7 @@ import mammoth
 
 from certsync.auth import (
     ADMIN_EMAIL,
+    admin_change_user_role,
     admin_required,
     admin_reset_password,
     authenticate_user,
@@ -378,11 +379,23 @@ def admin_users_create():
     email = request.form.get("email", "")
     password = request.form.get("password", "")
     full_name = request.form.get("full_name", "")
-    ok, msg = create_user(AUTH_DB_PATH, email, password, full_name)
+    role = request.form.get("role", "user")
+    ok, msg = create_user(AUTH_DB_PATH, email, password, full_name, role=role)
     if not ok:
         users = list_users(AUTH_DB_PATH)
         return render_template("admin_users.html", users=users, error=msg)
     return redirect(url_for("admin_users_page", msg=f"Đã tạo tài khoản {email} thành công!"))
+
+
+@app.route("/admin/users/<int:user_id>/change_role", methods=["POST"])
+@admin_required
+def admin_users_change_role(user_id: int):
+    new_role = request.form.get("role", "")
+    current_admin_id = session.get("user_id")
+    ok, msg = admin_change_user_role(AUTH_DB_PATH, user_id, new_role, current_admin_id=current_admin_id)
+    if not ok:
+        return redirect(url_for("admin_users_page", error=msg))
+    return redirect(url_for("admin_users_page", msg=msg))
 
 
 @app.route("/admin/users/<int:user_id>/reset_password", methods=["POST"])

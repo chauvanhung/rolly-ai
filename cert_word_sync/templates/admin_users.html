@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=3.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=3.1">
     <style>
       :root {
         --admin-bg-card: rgba(18, 24, 38, 0.85);
@@ -284,10 +284,10 @@
       }
 
       /* Form Fields */
-      .form-grid-3col {
+      .form-grid-4col {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 18px;
         margin-bottom: 20px;
       }
 
@@ -416,6 +416,38 @@
         border: 1px solid rgba(59, 130, 246, 0.35);
       }
 
+      /* Interactive Role Selector Dropdown in Table */
+      .select-role-styled {
+        padding: 6px 14px;
+        border-radius: 9999px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        outline: none;
+        transition: all 0.2s ease;
+        font-family: inherit;
+      }
+
+      .select-role-styled.admin-mode {
+        background: rgba(236, 72, 153, 0.18);
+        color: #f472b6;
+        border: 1px solid rgba(236, 72, 153, 0.4);
+      }
+
+      .select-role-styled.admin-mode:hover {
+        background: rgba(236, 72, 153, 0.3);
+      }
+
+      .select-role-styled.user-mode {
+        background: rgba(59, 130, 246, 0.18);
+        color: #60a5fa;
+        border: 1px solid rgba(59, 130, 246, 0.4);
+      }
+
+      .select-role-styled.user-mode:hover {
+        background: rgba(59, 130, 246, 0.3);
+      }
+
       .btn-act {
         padding: 7px 14px;
         font-size: 12px;
@@ -455,7 +487,7 @@
       @media (max-width: 900px) {
         .kpi-row { grid-template-columns: 1fr; }
         .ai-toggles-grid { grid-template-columns: 1fr; }
-        .form-grid-3col { grid-template-columns: 1fr; }
+        .form-grid-4col { grid-template-columns: 1fr; }
       }
     </style>
   </head>
@@ -499,8 +531,12 @@
         <div class="kpi-card">
           <div class="kpi-icon-wrapper indigo">👑</div>
           <div>
-            <div class="kpi-val">1</div>
-            <div class="kpi-lbl">Quản trị viên tối cao</div>
+            <div class="kpi-val">
+              {% set admin_count = namespace(val=0) %}
+              {% for u in users %}{% if u.is_admin %}{% set admin_count.val = admin_count.val + 1 %}{% endif %}{% endfor %}
+              {{ admin_count.val }}
+            </div>
+            <div class="kpi-lbl">Quản trị viên (Admin)</div>
           </div>
         </div>
         <div class="kpi-card">
@@ -567,7 +603,7 @@
           Tạo tài khoản người dùng hoặc quản trị viên cấp dưới thủ công cho hệ thống.
         </div>
         <form action="/admin/users/create" method="POST">
-          <div class="form-grid-3col">
+          <div class="form-grid-4col">
             <div class="form-field-group">
               <label class="form-label-custom">Email đăng nhập *</label>
               <input type="email" name="email" required placeholder="nhap_email@gmail.com" class="input-styled">
@@ -579,6 +615,13 @@
             <div class="form-field-group">
               <label class="form-label-custom">Họ và Tên</label>
               <input type="text" name="full_name" placeholder="Nguyễn Văn A" class="input-styled">
+            </div>
+            <div class="form-field-group">
+              <label class="form-label-custom">Quyền Hạn *</label>
+              <select name="role" class="input-styled">
+                <option value="user" selected>👤 User (Người dùng)</option>
+                <option value="admin">👑 Admin (Quản trị viên)</option>
+              </select>
             </div>
           </div>
           <div style="display: flex; justify-content: flex-end;">
@@ -607,7 +650,7 @@
                 <th>Người dùng</th>
                 <th>Email</th>
                 <th>Đăng nhập qua</th>
-                <th>Vai trò</th>
+                <th>Vai trò (Phân quyền)</th>
                 <th>Ngày tạo</th>
                 <th style="text-align: right;">Thao tác</th>
               </tr>
@@ -641,10 +684,19 @@
                   {% endif %}
                 </td>
                 <td>
-                  {% if u.is_admin %}
-                  <span class="badge-role admin">👑 Admin</span>
+                  {% if u.email == 'chauvanhung1999@gmail.com' or u.id == current_user.id %}
+                    {% if u.is_admin %}
+                    <span class="badge-role admin">👑 Admin Tối Cao</span>
+                    {% else %}
+                    <span class="badge-role user">👤 User</span>
+                    {% endif %}
                   {% else %}
-                  <span class="badge-role user">👤 User</span>
+                    <form action="/admin/users/{{ u.id }}/change_role" method="POST" style="display: inline-block;">
+                      <select name="role" onchange="if(confirm('Bạn có chắc chắn muốn đổi vai trò tài khoản {{ u.email }} không?')) { this.form.submit(); } else { this.value = '{{ u.role }}'; }" class="select-role-styled {% if u.is_admin %}admin-mode{% else %}user-mode{% endif %}">
+                        <option value="user" {% if not u.is_admin %}selected{% endif %}>👤 User</option>
+                        <option value="admin" {% if u.is_admin %}selected{% endif %}>👑 Admin</option>
+                      </select>
+                    </form>
                   {% endif %}
                 </td>
                 <td style="font-size: 12px; color: #94a3b8;">{{ u.created_at }}</td>
