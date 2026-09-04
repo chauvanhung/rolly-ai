@@ -249,7 +249,14 @@ def exchange_google_code_and_get_user(
             timeout=10,
         )
         if token_res.status_code != 200:
-            return None, f"Lỗi xác thực Google token (Code {token_res.status_code})."
+            err_json = {}
+            try:
+                err_json = token_res.json()
+            except Exception:
+                pass
+            err_desc = err_json.get("error_description") or err_json.get("error") or token_res.text[:150]
+            return None, f"Lỗi xác thực Google token (Code {token_res.status_code}): {err_desc}"
+
 
         token_data = token_res.json()
         access_token = token_data.get("access_token")
