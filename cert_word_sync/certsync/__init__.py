@@ -1,0 +1,1 @@
+"""Word certificate synchronization package."""

@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quản Lý Tài Khoản - Admin Cert Word Sync</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+      .admin-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 30px 20px;
+      }
+      .admin-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 25px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 20px 24px;
+        border-radius: 16px;
+        backdrop-filter: blur(10px);
+      }
+      .admin-title-area {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .admin-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #6366f1, #a855f7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 22px;
+      }
+      .user-table-card {
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        overflow: hidden;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      }
+      .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+      }
+      table.admin-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 14px;
+      }
+      table.admin-table th {
+        background: rgba(15, 23, 42, 0.8);
+        color: #94a3b8;
+        font-weight: 600;
+        padding: 14px 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+      }
+      table.admin-table td {
+        padding: 16px 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        color: #e2e8f0;
+        vertical-align: middle;
+      }
+      table.admin-table tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .role-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .role-admin {
+        background: rgba(236, 72, 153, 0.15);
+        color: #f472b6;
+        border: 1px solid rgba(236, 72, 153, 0.3);
+      }
+      .role-user {
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+      }
+      .action-btns {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .btn-sm {
+        padding: 6px 12px;
+        font-size: 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        text-decoration: none;
+      }
+      .btn-warning {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.4);
+      }
+      .btn-warning:hover {
+        background: #f59e0b;
+        color: #000;
+      }
+      .btn-danger {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.4);
+      }
+      .btn-danger:hover {
+        background: #ef4444;
+        color: #fff;
+      }
+      .form-card {
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 30px;
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container admin-container">
+      <!-- Admin Header -->
+      <div class="admin-header">
+        <div class="admin-title-area">
+          <div class="admin-icon">👥</div>
+          <div>
+            <h1 style="font-size: 22px; font-weight: 800; color: #fff; margin: 0;">Quản Lý Tài Khoản (Admin)</h1>
+            <p style="font-size: 13px; color: #94a3b8; margin: 4px 0 0 0;">Danh sách và quyền hạn tài khoản trong hệ thống Cert Word Sync</p>
+          </div>
+        </div>
+        <a href="/" class="btn btn-secondary" style="border-radius: 20px; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+          ← Quay lại Trang Chủ
+        </a>
+      </div>
+
+      <!-- Messages & Alerts -->
+      {% if msg %}
+      <div class="alert-banner alert-success" style="margin-bottom: 20px;">
+        <span>{{ msg }}</span>
+      </div>
+      {% endif %}
+      {% if error %}
+      <div class="alert-banner alert-danger" style="margin-bottom: 20px;">
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      <!-- Overview Stats -->
+      <div class="stats-grid" style="margin-bottom: 25px;">
+        <div class="stat-card">
+          <div class="stat-icon emerald">👥</div>
+          <div class="stat-details">
+            <div class="value">{{ users|length }}</div>
+            <div class="label">Tổng số tài khoản</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">👑</div>
+          <div class="stat-details">
+            <div class="value">1</div>
+            <div class="label">Quản trị viên (chauvanhung1999@gmail.com)</div>
+          </div>
+        </div>
+      <!-- Admin System Settings & Global AI Toggle -->
+      <div class="form-card" style="margin-bottom: 25px;">
+        <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin-top: 0; display: flex; align-items: center; gap: 8px;">
+          🤖 Cấu Hình Bật / Tắt AI Toàn Hệ Thống (Admin Control)
+        </h3>
+        <p style="font-size: 13px; color: #94a3b8; margin-bottom: 16px;">
+          Admin quy định toàn bộ hệ thống sử dụng AI hay chuyển sang chế độ trích xuất Regex thuần cho tất cả chứng từ mới.
+        </p>
+        <form action="/admin/settings" method="POST">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
+            <div class="ai-toggle-box" style="margin: 0;">
+              <div>
+                <div style="font-size: 14px; font-weight: 700; color: #fff;">1. AI Trích xuất dữ liệu Chứng từ</div>
+                <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Áp dụng cho mọi yêu cầu tạo file từ chứng thư mới</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" name="enable_ai_extraction" value="1" {% if system_settings.enable_ai_extraction %}checked{% endif %}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="ai-toggle-box" style="margin: 0;">
+              <div>
+                <div style="font-size: 14px; font-weight: 700; color: #fff;">2. AI Học & phân tích mẫu Word mới</div>
+                <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Áp dụng khi tạo bộ form khách hàng mới</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" name="enable_ai_template_learning" value="1" {% if system_settings.enable_ai_template_learning %}checked{% endif %}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn btn-primary" style="padding: 10px 24px;">
+              💾 Lưu Cấu Hình AI Hệ Thống
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Create New User Form -->
+      <div class="form-card">
+        <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin-top: 0; display: flex; align-items: center; gap: 8px;">
+          ➕ Thêm Tài Khoản Mới
+        </h3>
+        <form action="/admin/users/create" method="POST">
+          <div class="form-grid">
+            <div>
+              <label style="display: block; font-size: 12px; color: #94a3b8; margin-bottom: 6px;">Email *</label>
+              <input type="email" name="email" required placeholder="nhap_email@gmail.com" class="input-field" style="width: 100%; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; color: #94a3b8; margin-bottom: 6px;">Mật khẩu * (Tối thiểu 6 ký tự)</label>
+              <input type="password" name="password" required minlength="6" placeholder="••••••••" class="input-field" style="width: 100%; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; color: #94a3b8; margin-bottom: 6px;">Họ và Tên</label>
+              <input type="text" name="full_name" placeholder="Nguyễn Văn A" class="input-field" style="width: 100%; box-sizing: border-box;">
+            </div>
+          </div>
+          <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn btn-primary" style="padding: 10px 24px;">
+              Tạo tài khoản
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- User List Table -->
+      <div class="user-table-card">
+        <div style="padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin: 0; color: #fff; font-size: 16px; font-weight: 700;">Danh Sách Người Dùng</h3>
+          <span style="font-size: 12px; color: #94a3b8;">Tổng cộng: {{ users|length }} tài khoản</span>
+        </div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Người dùng</th>
+                <th>Email</th>
+                <th>Đăng nhập qua</th>
+                <th>Vai trò</th>
+                <th>Ngày tạo</th>
+                <th style="text-align: right;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in users %}
+              <tr>
+                <td>#{{ u.id }}</td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    {% if u.avatar_url %}
+                    <img src="{{ u.avatar_url }}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                    {% else %}
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--accent-indigo); color: #fff; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center;">
+                      {{ u.full_name[0]|upper if u.full_name else 'U' }}
+                    </div>
+                    {% endif %}
+                    <span style="font-weight: 600;">{{ u.full_name }}</span>
+                  </div>
+                </td>
+                <td style="font-family: monospace; font-size: 13px;">{{ u.email }}</td>
+                <td>
+                  {% if u.google_id %}
+                  <span style="color: #60a5fa; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                    🌐 Google OAuth
+                  </span>
+                  {% else %}
+                  <span style="color: #94a3b8; font-size: 12px;">
+                    🔑 Email / Password
+                  </span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if u.is_admin %}
+                  <span class="role-badge role-admin">👑 Admin</span>
+                  {% else %}
+                  <span class="role-badge role-user">👤 User</span>
+                  {% endif %}
+                </td>
+                <td style="font-size: 12px; color: #94a3b8;">{{ u.created_at }}</td>
+                <td>
+                  <div class="action-btns" style="justify-content: flex-end;">
+                    <!-- Password Reset Button -->
+                    <button type="button" class="btn-sm btn-warning" onclick="toggleResetForm({{ u.id }})">
+                      🔑 Đổi MK
+                    </button>
+                    <!-- Delete Button -->
+                    {% if u.email != 'chauvanhung1999@gmail.com' and u.id != current_user.id %}
+                    <form action="/admin/users/{{ u.id }}/delete" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa tài khoản {{ u.email }} không?');" style="display: inline;">
+                      <button type="submit" class="btn-sm btn-danger">
+                        🗑️ Xóa
+                      </button>
+                    </form>
+                    {% endif %}
+                  </div>
+
+                  <!-- Inline Reset Password Form -->
+                  <div id="reset-form-{{ u.id }}" style="display: none; margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                    <form action="/admin/users/{{ u.id }}/reset_password" method="POST" style="display: flex; gap: 8px;">
+                      <input type="password" name="new_password" required minlength="6" placeholder="Mật khẩu mới..." class="input-field" style="flex: 1; padding: 6px 10px; font-size: 12px;">
+                      <button type="submit" class="btn-sm btn-warning">Lưu</button>
+                      <button type="button" class="btn-sm btn-secondary" onclick="toggleResetForm({{ u.id }})">Hủy</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function toggleResetForm(userId) {
+        var form = document.getElementById('reset-form-' + userId);
+        if (form.style.display === 'none' || form.style.display === '') {
+          form.style.display = 'block';
+        } else {
+          form.style.display = 'none';
+        }
+      }
+    </script>
+  </body>
+</html>

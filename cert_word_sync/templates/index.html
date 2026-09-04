@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cert Word Sync - Tự Động Cập Nhật Form Word</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- App Header -->
+      <header class="app-header">
+        <div class="brand-wrapper">
+          <div class="brand-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div class="brand-info">
+            <h1>Cert Word Sync</h1>
+            <p>Hệ thống tự động đồng bộ dữ liệu từ Chứng thư sang bộ form mẫu khách hàng</p>
+          </div>
+        </div>
+        <div class="header-badges">
+          {% if current_user %}
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            {% if current_user.is_admin %}
+            <a href="/admin/users" class="btn btn-primary" style="padding: 6px 14px; font-size: 12px; border-radius: 20px; text-decoration: none; display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #6366f1, #a855f7);">
+              👥 Quản lý tài khoản
+            </a>
+            {% endif %}
+            <div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); padding: 4px 12px 4px 6px; border-radius: 30px;">
+              {% if current_user.avatar_url %}
+              <img src="{{ current_user.avatar_url }}" alt="User" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;">
+              {% else %}
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--accent-indigo); color: #fff; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center;">
+                {{ current_user.full_name[0]|upper }}
+              </div>
+              {% endif %}
+              <span style="font-size: 13px; font-weight: 600; color: #fff;">{{ current_user.full_name }}</span>
+            </div>
+            <a href="/logout" class="btn btn-secondary" style="padding: 6px 14px; font-size: 12px; border-radius: 20px; text-decoration: none;">
+              🚪 Đăng xuất
+            </a>
+          </div>
+          {% else %}
+          <div class="badge badge-status">
+            <span class="status-dot"></span>
+            Hệ thống sẵn sàng
+          </div>
+          {% endif %}
+        </div>
+      </header>
+
+      <!-- Overview Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon emerald">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <div class="stat-details">
+            <div class="value">{{ client_list|length }}</div>
+            <div class="label">Mã khách hàng cấu hình</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div class="stat-details">
+            <div class="value">.docx / .doc</div>
+            <div class="label">Định dạng file Word mẫu</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon cyan">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div class="stat-details">
+            <div class="value">Tự động 100%</div>
+            <div class="label">Trích xuất & ghi đè vị trí</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Created Success Notification Banner -->
+      {% if created %}
+      <div class="alert-banner alert-success">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Đã thêm bộ form mẫu cho khách hàng <strong>{{ created }}</strong> thành công! Bạn có thể chọn chạy đồng bộ ngay bên dưới.</span>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Navigation Tabs -->
+      <nav class="tabs-header">
+        <button class="tab-btn active" data-tab="tab-generate">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          ⚡ Tạo File Đồng Bộ
+        </button>
+        {% if session.get('role') == 'admin' %}
+        <button class="tab-btn" data-tab="tab-new-client">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          ➕ Thêm Bộ Form Khách Mới
+        </button>
+        {% endif %}
+        <button class="tab-btn" data-tab="tab-clients-list">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          📁 Danh Sách Bộ Form ({{ client_list|length }})
+        </button>
+      </nav>
+
+      <!-- TAB 1: GENERATE FILES -->
+      <div id="tab-generate" class="tab-panel active">
+        <div class="content-card">
+          <h2 class="card-title">
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="var(--accent-indigo)">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Tạo File Từ Chứng Thư Mới
+          </h2>
+          <p class="card-subtitle">Chọn mã khách hàng và upload file Chứng thư (.docx). Tool sẽ tự động trích xuất thông tin và tạo bộ file hoàn chỉnh theo template.</p>
+
+          <form action="/generate" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+              <label class="form-label">Chọn Khách Hàng</label>
+              <select name="client_id" class="form-control" required>
+                {% for client in clients %}
+                <option value="{{ client }}" {% if created == client %}selected{% endif %}>{{ client|upper }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-hint">Danh sách các khách hàng đã được định nghĩa mẫu trước đó.</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">File Chứng Thư Mới (.docx)</label>
+              <div class="dropzone">
+                <input type="file" name="certificate" accept=".docx" required>
+                <div class="dropzone-icon">
+                  <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 0115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                </div>
+                <div class="dropzone-title">Kéo & thả file Chứng thư vào đây</div>
+                <div class="dropzone-desc">Hoặc bấm để duyệt file từ máy tính (Chỉ nhận file .docx)</div>
+              </div>
+
+              <!-- Preview Zone -->
+              <div class="file-preview" style="display: none;">
+                <div class="file-preview-info">
+                  <div class="file-preview-icon">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="file-preview-name">-</div>
+                    <div class="file-preview-size">-</div>
+                  </div>
+                </div>
+                <button type="button" class="file-preview-remove" title="Hủy bỏ">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- AI Mode Status / Admin Control Box -->
+            <div class="ai-toggle-box">
+              <div class="ai-toggle-label">
+                <span>🤖 Chế độ AI trích xuất dữ liệu</span>
+                <span style="font-size: 11px; font-weight: normal; color: var(--text-muted);">(Cấu hình bởi Admin toàn hệ thống)</span>
+              </div>
+              {% if session.get('role') == 'admin' %}
+              <label class="toggle-switch" title="Admin Bật / Tắt AI cho chứng từ mới">
+                <input type="checkbox" id="use_ai_generate" name="use_ai" value="1" {% if system_settings.enable_ai_extraction %}checked{% endif %}>
+                <span class="toggle-slider"></span>
+              </label>
+              {% else %}
+              <span class="badge" style="font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; {% if system_settings.enable_ai_extraction %}background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); border: 1px solid rgba(16, 185, 129, 0.4);{% else %}background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); border: 1px solid rgba(148, 163, 184, 0.4);{% endif %}">
+                {% if system_settings.enable_ai_extraction %}🟢 AI BẬT{% else %}🔴 AI TẮT (Regex){% endif %}
+              </span>
+              {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Tiến Hành Tạo File Cập Nhật
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- TAB 2: ADD NEW CLIENT -->
+      <div id="tab-new-client" class="tab-panel">
+        <div class="content-card">
+          <h2 class="card-title">
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="var(--accent-emerald)">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Thêm Bộ Form Khách Hàng Mới
+          </h2>
+          <p class="card-subtitle">Upload ít nhất 1 file mẫu trước: Phiếu xác nhận hoặc Biên bản. File còn lại có thể bổ sung sau trong màn Chỉnh form. Nếu upload đủ 2 file, AI sẽ tự động học cấu trúc bộ form đầy đủ.</p>
+
+          <form action="/clients" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+              <label class="form-label">Tên khách hàng / Mã bộ form</label>
+              <input type="text" name="client_id" class="form-control" placeholder="Ví dụ: Công ty TNHH Quốc tế Vũ Gia tại Hà Nam" required>
+              <div class="form-hint">Có thể nhập tiếng Việt có dấu. Tool sẽ giữ tên này để hiển thị và tự tạo mã nội bộ an toàn.</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">1. File Phiếu Xác Nhận Mẫu (.doc / .docx)</label>
+              <div class="dropzone">
+                <input type="file" name="phieu_template" accept=".doc,.docx">
+                <div class="dropzone-icon">
+                  <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div class="dropzone-title">Kéo & thả Phiếu Xác Nhận mẫu</div>
+                <div class="dropzone-desc">Có thể để trống nếu bạn muốn up Biên bản trước</div>
+              </div>
+              <div class="file-preview" style="display: none;">
+                <div class="file-preview-info">
+                  <div class="file-preview-icon">✓</div>
+                  <div>
+                    <div class="file-preview-name">-</div>
+                    <div class="file-preview-size">-</div>
+                  </div>
+                </div>
+                <button type="button" class="file-preview-remove">✕</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">2. File Biên Bản Mẫu (.doc / .docx)</label>
+              <div class="dropzone">
+                <input type="file" name="bien_ban_template" accept=".doc,.docx">
+                <div class="dropzone-icon">
+                  <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div class="dropzone-title">Kéo & thả Biên Bản mẫu</div>
+                <div class="dropzone-desc">Có thể để trống và bổ sung sau trong Chỉnh form</div>
+                </div>
+                <button type="button" class="file-preview-remove">✕</button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              Lưu & Khởi Tạo Bộ Form
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- TAB 3: CLIENTS LIST -->
+      <div id="tab-clients-list" class="tab-panel">
+        <div class="content-card">
+          <h2 class="card-title">
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="var(--accent-cyan)">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            Danh Sách Mẫu Đã Cấu Hình
+          </h2>
+          <p class="card-subtitle">Chi tiết các mã khách hàng đã cài đặt mẫu Word và quy tắc trích xuất.</p>
+
+          <div class="clients-grid">
+            {% for item in client_list %}
+            <div class="client-card">
+              <div class="client-card-header">
+                <span class="client-tag">{{ item.name }}</span>
+                <span class="badge" style="font-size: 11px;">{{ item.total_updates }} Trường nhãn</span>
+              </div>
+              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Mapping: {{ "AI tự học" if item.mapping_source == "ai" else "Mặc định / chỉnh tay" }}</p>
+              <p style="font-size: 13px; color: var(--text-secondary);">Thư mục: <code>templates/{{ item.id }}/</code></p>
+              {% if session.get('role') == 'admin' %}
+              <a href="/clients/{{ item.id }}/edit" class="btn btn-secondary" style="display: inline-flex; margin: 8px 0 10px; padding: 7px 12px; font-size: 12px; text-decoration: none;">
+                ⚙️ Chỉnh form (Admin)
+              </a>
+              {% endif %}
+              <ul class="client-templates-list">
+                {% for tname in item.template_names %}
+                <li>
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="var(--accent-emerald)">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  {{ tname }}
+                </li>
+                {% else %}
+                <li style="color: var(--text-muted);">Chưa có file mẫu</li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% else %}
+            <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 32px;">
+              Chưa có khách hàng nào. Hãy thêm ở Tab "Thêm Bộ Form Khách Mới".
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- App Footer -->
+      <footer class="app-footer">
+        <p>Cert Word Sync Automation &bull; Phiên bản nội bộ &bull; Google Deepmind Pair-programmed</p>
+      </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </body>
+</html>

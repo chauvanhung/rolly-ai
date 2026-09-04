@@ -1,0 +1,55 @@
+{
+  "name": "CÔNG TY TNHH QUỐC TẾ VŨ GIA TẠI HÀ NAM",
+  "templates": [
+    {
+      "source": "PHIEU_VU_GIA.docx",
+      "output": "phieu_CONG_TY_TNHH_QUOC_TE_VU_GIA_TAI_HA_NAM_da_cap_nhat.docx",
+      "updates": [
+        {
+          "labels": [
+            "Số chứng thư:",
+            "Số chứng nhận:",
+            "Số chứng từ:",
+            "Số CT:",
+            "Số:"
+          ],
+          "field": "certificate_no"
+        },
+        {
+          "labels": [
+            "Ngày cấp chứng thư:",
+            "Ngày chứng thư:",
+            "Ngày chứng từ:",
+            "Ngày cấp:",
+            "Ngày:"
+          ],
+          "field": "certificate_date"
+        },
+        {
+          "labels": [
+            "Tên khách hàng",
+            "Tên tổ chức",
+            "Tên đơn vị"
+          ],
+          "field": "customer_name"
+        },
+        {
+          "labels": [
+            "Địa điểm giám định/lấy mẫu:",
+            "Địa điểm kiểm tra, giám định",
+            "Địa điểm giám định:"
+          ],
+          "field": "inspection_location"
+        },
+        {
+          "labels": [
+            "Số lượng Container:",
+            "Số lượng container:",
+            "Số container:"
+          ],
+          "field": "container_count"
+        }
+      ]
+    }
+  ]
+}
