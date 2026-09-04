@@ -274,9 +274,17 @@ def register_post():
 
 
 def get_google_redirect_uri() -> str:
-    host = request.headers.get("X-Forwarded-Host") or request.host
-    proto = request.headers.get("X-Forwarded-Proto") or ("https" if "rollyhub.com" in host else request.scheme)
-    return f"{proto}://{host}/auth/google/callback"
+    raw_host = request.headers.get("X-Forwarded-Host") or request.host
+    host = raw_host.split(",")[0].strip()
+    if ":" in host and not (host.startswith("localhost") or host.startswith("127.0.0.1")):
+        host = host.split(":")[0]
+    proto = request.headers.get("X-Forwarded-Proto", "").split(",")[0].strip()
+    if not proto:
+        proto = "https" if "rollyhub.com" in host else request.scheme
+    uri = f"{proto}://{host}/auth/google/callback"
+    print(f"[OAUTH REDIRECT URI] {uri} (raw_host={raw_host}, proto={proto})")
+    return uri
+
 
 
 @app.route("/auth/google", methods=["GET"])
