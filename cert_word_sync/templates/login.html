@@ -136,32 +136,7 @@
       {% endif %}
 
       <!-- Google Sign In Section -->
-      {% if google_client_id %}
-      <script src="https://accounts.google.com/gsi/client" async defer></script>
-      <script>
-        function handleGoogleCredentialResponse(response) {
-          if (!response || !response.credential) return;
-          fetch('/auth/google/idtoken', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ credential: response.credential })
-          })
-          .then(res => res.json())
-          .then(data => {
-            if (data.ok) {
-              window.location.href = data.redirect || '/';
-            } else {
-              alert(data.error || 'Đăng nhập Google thất bại');
-            }
-          })
-          .catch(err => {
-            console.error(err);
-            alert('Lỗi kết nối tới máy chủ khi đăng nhập Google.');
-          });
-        }
-      </script>
-
-      {% if google_auth_url %}
+      {% if google_client_id and google_auth_url %}
       <a href="{{ google_auth_url }}" class="btn-google">
         <svg width="18" height="18" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -171,29 +146,10 @@
         </svg>
         <span>Đăng nhập bằng Google</span>
       </a>
-      {% endif %}
-
-      <div style="display: flex; justify-content: center; margin-bottom: 20px;">
-        <div id="g_id_onload"
-             data-client_id="{{ google_client_id }}"
-             data-callback="handleGoogleCredentialResponse"
-             data-auto_prompt="false">
-        </div>
-        <div class="g_id_signin"
-             data-type="standard"
-             data-shape="rectangular"
-             data-theme="outline"
-             data-text="signin_with"
-             data-size="large"
-             data-logo_alignment="left"
-             data-width="368">
-        </div>
-      </div>
-
-
 
       <div class="divider"><span>HOẶC ĐĂNG NHẬP VỚI EMAIL</span></div>
       {% else %}
+
       <div style="background: rgba(99, 102, 241, 0.1); border: 1px dashed rgba(99, 102, 241, 0.3); border-radius: var(--radius-md); padding: 10px 14px; font-size: 12px; color: var(--text-secondary); margin-bottom: 20px; text-align: center;">
         💡 Đăng nhập bằng Google có thể bật bằng cách thêm <code>GOOGLE_CLIENT_ID</code> vào <code>.env</code>
       </div>
