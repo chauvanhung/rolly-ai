@@ -77,6 +77,8 @@ load_dotenv(BASE_DIR / ".env")
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "cert_word_sync_secret_key_2026_super_secure")
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+
 
 init_auth_db(AUTH_DB_PATH)
 
