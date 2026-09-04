@@ -183,13 +183,20 @@ def set_user_session(user: dict) -> None:
     session["user_id"] = user["id"]
     session["user_email"] = user["email"]
     session["user_name"] = user["full_name"]
+    session["role"] = user.get("role", "user")
+    session["is_admin"] = user.get("is_admin", False)
+
 
 
 @app.context_processor
 def inject_user():
     user_id = session.get("user_id")
     current_user = get_user_by_id(AUTH_DB_PATH, user_id) if user_id else None
+    if current_user:
+        session["role"] = current_user.get("role", "user")
+        session["is_admin"] = current_user.get("is_admin", False)
     return {"current_user": current_user}
+
 
 
 # --- Authentication Routes ---

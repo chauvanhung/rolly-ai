@@ -335,11 +335,15 @@ def admin_required(view: F) -> F:
     @wraps(view)
     def wrapped(*args, **kwargs):
         user_id = session.get("user_id")
+        if not user_id:
+            return redirect(url_for("login_page", error="Vui lòng đăng nhập để tiếp tục."))
         user_role = session.get("role")
         user_email = (session.get("user_email") or session.get("email") or "").strip().lower()
-        if not user_id or (user_role != "admin" and user_email != ADMIN_EMAIL):
+        is_admin = session.get("is_admin")
+        if not is_admin and user_role != "admin" and user_email != ADMIN_EMAIL:
             return redirect(url_for("index", error="Quyền truy cập bị từ chối. Tính năng này chỉ dành cho Admin."))
         return view(*args, **kwargs)
 
     return wrapped  # type: ignore[return-value]
+
 
