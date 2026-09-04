@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=3.0">
     <style>
       :root {
         --admin-bg-card: rgba(18, 24, 38, 0.85);
@@ -21,6 +21,8 @@
         background-attachment: fixed;
         color: #f8fafc;
         font-family: 'Plus Jakarta Sans', sans-serif;
+        margin: 0;
+        padding: 0;
       }
 
       .admin-layout {
@@ -105,18 +107,21 @@
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 20px;
+        width: 100%;
       }
 
       .kpi-card {
         background: var(--admin-bg-card);
         border: 1px solid var(--admin-border);
         border-radius: 18px;
-        padding: 22px 24px;
+        padding: 20px 24px;
         display: flex;
         align-items: center;
         gap: 16px;
         backdrop-filter: blur(12px);
         transition: all 0.25s ease;
+        min-height: 88px;
+        box-sizing: border-box;
       }
 
       .kpi-card:hover {
@@ -133,6 +138,7 @@
         align-items: center;
         justify-content: center;
         font-size: 22px;
+        flex-shrink: 0;
       }
 
       .kpi-icon-wrapper.indigo {
@@ -171,6 +177,8 @@
         padding: 28px;
         backdrop-filter: blur(16px);
         box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
+        width: 100%;
+        box-sizing: border-box;
       }
 
       .panel-title {
@@ -338,6 +346,8 @@
         overflow: hidden;
         backdrop-filter: blur(16px);
         box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
+        width: 100%;
+        box-sizing: border-box;
       }
 
       .table-header-toolbar {
@@ -467,12 +477,12 @@
 
       <!-- Messages & Alerts -->
       {% if msg %}
-      <div class="alert-banner alert-success">
+      <div class="alert-banner alert-success" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #34d399; padding: 14px 20px; border-radius: 14px;">
         <span>✓ {{ msg }}</span>
       </div>
       {% endif %}
       {% if error %}
-      <div class="alert-banner alert-danger">
+      <div class="alert-banner alert-danger" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; padding: 14px 20px; border-radius: 14px;">
         <span>⚠️ {{ error }}</span>
       </div>
       {% endif %}
@@ -483,14 +493,14 @@
           <div class="kpi-icon-wrapper emerald">👥</div>
           <div>
             <div class="kpi-val">{{ users|length }}</div>
-            <div class="label">Tổng tài khoản hệ thống</div>
+            <div class="kpi-lbl">Tổng tài khoản hệ thống</div>
           </div>
         </div>
         <div class="kpi-card">
           <div class="kpi-icon-wrapper indigo">👑</div>
           <div>
             <div class="kpi-val">1</div>
-            <div class="label">Quản trị viên tối cao</div>
+            <div class="kpi-lbl">Quản trị viên tối cao</div>
           </div>
         </div>
         <div class="kpi-card">
@@ -503,7 +513,7 @@
               <span style="color: #fbbf24;">⚙️ AI Trích Xuất Tắt</span>
               {% endif %}
             </div>
-            <div class="label">Trạng thái AI mặc định</div>
+            <div class="kpi-lbl">Trạng thái AI mặc định</div>
           </div>
         </div>
       </div>
@@ -514,7 +524,7 @@
           <span>🤖 Cấu Hình Bật / Tắt AI Toàn Hệ Thống</span>
         </div>
         <div class="panel-desc">
-          Admin quy định toàn bộ hệ thống mặc định tự động kích hoạt AI hay chuyển sang chế độ Regex tĩnh cho tất cả chứng từ mới.
+          Admin quy định toàn bộ hệ thống mặc định tự động kích hoạt AI hay chuyển sang chế độ Regex thuần cho tất cả chứng từ mới.
         </div>
         <form action="/admin/settings" method="POST">
           <div class="ai-toggles-grid">
@@ -541,7 +551,7 @@
             </div>
           </div>
           <div style="display: flex; justify-content: flex-end;">
-            <button type="submit" class="btn btn-primary" style="padding: 12px 28px; border-radius: 12px;">
+            <button type="submit" class="btn btn-primary" style="padding: 12px 28px; border-radius: 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: #ffffff; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">
               💾 Lưu Cấu Hình AI Hệ Thống
             </button>
           </div>
@@ -572,7 +582,7 @@
             </div>
           </div>
           <div style="display: flex; justify-content: flex-end;">
-            <button type="submit" class="btn btn-primary" style="padding: 12px 28px; border-radius: 12px;">
+            <button type="submit" class="btn btn-primary" style="padding: 12px 28px; border-radius: 12px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border: none; color: #ffffff; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);">
               ✨ Tạo Tài Khoản Nhanh
             </button>
           </div>
