@@ -3,170 +3,306 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Quản Lý Tài Khoản - Admin Cert Word Sync</title>
+    <title>Quản Lý Tài Khoản & Hệ Thống - Admin Cert Word Sync</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2.0">
     <style>
-      .admin-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 30px 20px;
+      :root {
+        --admin-bg-card: rgba(18, 24, 38, 0.85);
+        --admin-border: rgba(255, 255, 255, 0.08);
+        --admin-border-active: rgba(99, 102, 241, 0.4);
       }
-      .admin-header {
+
+      body {
+        background: #070a13;
+        background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f172a 50%, #050811 100%);
+        background-attachment: fixed;
+        color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+      }
+
+      .admin-layout {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      /* Admin Header Banner */
+      .admin-hero-banner {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 25px;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 20px 24px;
-        border-radius: 16px;
-        backdrop-filter: blur(10px);
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
+        border: 1px solid var(--admin-border);
+        padding: 24px 30px;
+        border-radius: 20px;
+        backdrop-filter: blur(16px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
       }
-      .admin-title-area {
+
+      .admin-hero-title {
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 18px;
       }
-      .admin-icon {
-        width: 46px;
-        height: 46px;
-        border-radius: 12px;
-        background: linear-gradient(135deg, #6366f1, #a855f7);
+
+      .admin-hero-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #fff;
-        font-size: 22px;
-      }
-      .user-table-card {
-        background: rgba(30, 41, 59, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        overflow: hidden;
-        margin-bottom: 30px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-      }
-      .table-responsive {
-        width: 100%;
-        overflow-x: auto;
-      }
-      table.admin-table {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: left;
-        font-size: 14px;
-      }
-      table.admin-table th {
-        background: rgba(15, 23, 42, 0.8);
-        color: #94a3b8;
-        font-weight: 600;
-        padding: 14px 18px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        text-transform: uppercase;
-        font-size: 11px;
-        letter-spacing: 0.5px;
-      }
-      table.admin-table td {
-        padding: 16px 18px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        color: #e2e8f0;
-        vertical-align: middle;
-      }
-      table.admin-table tr:hover {
-        background: rgba(255, 255, 255, 0.02);
-      }
-      .role-badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-      }
-      .role-admin {
-        background: rgba(236, 72, 153, 0.15);
-        color: #f472b6;
-        border: 1px solid rgba(236, 72, 153, 0.3);
-      }
-      .role-user {
-        background: rgba(59, 130, 246, 0.15);
-        color: #60a5fa;
-        border: 1px solid rgba(59, 130, 246, 0.3);
-      }
-      .action-btns {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .btn-sm {
-        padding: 6px 12px;
-        font-size: 12px;
-        border-radius: 8px;
-        cursor: pointer;
-        border: none;
-        transition: all 0.2s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        text-decoration: none;
-      }
-      .btn-warning {
-        background: rgba(245, 158, 11, 0.2);
-        color: #fbbf24;
-        border: 1px solid rgba(245, 158, 11, 0.4);
-      }
-      .btn-warning:hover {
-        background: #f59e0b;
-        color: #000;
-      }
-      .btn-danger {
-        background: rgba(239, 68, 68, 0.2);
-        color: #f87171;
-        border: 1px solid rgba(239, 68, 68, 0.4);
-      }
-      .btn-danger:hover {
-        background: #ef4444;
-        color: #fff;
-      }
-      .form-card {
-        background: rgba(30, 41, 59, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 24px;
-        margin-bottom: 30px;
-      }
-      .admin-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 30px 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 25px;
-      }
-      .admin-container > * {
-        width: 100%;
-      }
-      .form-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-        margin-top: 16px;
-      }
-      @media (max-width: 768px) {
-        .form-grid {
-          grid-template-columns: 1fr;
-        }
+        color: #ffffff;
+        font-size: 24px;
+        box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.5);
       }
 
-      .input-field {
+      .admin-hero-heading h1 {
+        font-size: 24px;
+        font-weight: 800;
+        color: #ffffff;
+        letter-spacing: -0.4px;
+        margin: 0;
+      }
+
+      .admin-hero-heading p {
+        font-size: 13px;
+        color: #94a3b8;
+        margin: 4px 0 0 0;
+      }
+
+      .btn-back-home {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #e2e8f0;
+        padding: 10px 20px;
+        border-radius: 9999px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+      }
+
+      .btn-back-home:hover {
+        background: rgba(99, 102, 241, 0.2);
+        border-color: rgba(99, 102, 241, 0.4);
+        color: #ffffff;
+        transform: translateY(-1px);
+      }
+
+      /* Stat KPI Row */
+      .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+
+      .kpi-card {
+        background: var(--admin-bg-card);
+        border: 1px solid var(--admin-border);
+        border-radius: 18px;
+        padding: 22px 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        backdrop-filter: blur(12px);
+        transition: all 0.25s ease;
+      }
+
+      .kpi-card:hover {
+        border-color: var(--admin-border-active);
+        transform: translateY(-2px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .kpi-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+      }
+
+      .kpi-icon-wrapper.indigo {
+        background: rgba(99, 102, 241, 0.15);
+        color: #818cf8;
+      }
+
+      .kpi-icon-wrapper.emerald {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+      }
+
+      .kpi-icon-wrapper.cyan {
+        background: rgba(6, 182, 212, 0.15);
+        color: #38bdf8;
+      }
+
+      .kpi-val {
+        font-size: 22px;
+        font-weight: 800;
+        color: #ffffff;
+        line-height: 1.2;
+      }
+
+      .kpi-lbl {
+        font-size: 12px;
+        color: #94a3b8;
+        font-weight: 500;
+      }
+
+      /* Admin Cards Common */
+      .panel-card {
+        background: var(--admin-bg-card);
+        border: 1px solid var(--admin-border);
+        border-radius: 20px;
+        padding: 28px;
+        backdrop-filter: blur(16px);
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
+      }
+
+      .panel-title {
+        font-size: 17px;
+        font-weight: 800;
+        color: #ffffff;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .panel-desc {
+        font-size: 13px;
+        color: #94a3b8;
+        margin-bottom: 22px;
+      }
+
+      /* AI Toggles Grid */
+      .ai-toggles-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .ai-feature-box {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 16px;
+        padding: 20px 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        transition: border-color 0.2s ease;
+      }
+
+      .ai-feature-box:hover {
+        border-color: rgba(99, 102, 241, 0.3);
+      }
+
+      .ai-feature-info {
+        flex: 1;
+      }
+
+      .ai-feature-name {
+        font-size: 14px;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 4px;
+      }
+
+      .ai-feature-hint {
+        font-size: 12px;
+        color: #94a3b8;
+      }
+
+      /* iOS Style Toggle Switch */
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 52px;
+        height: 28px;
+        flex-shrink: 0;
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #334155;
+        transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 28px;
+      }
+
+      .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 3px;
+        bottom: 3px;
+        background-color: #ffffff;
+        transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 50%;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      }
+
+      input:checked + .toggle-slider {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+      }
+
+      input:checked + .toggle-slider:before {
+        transform: translateX(24px);
+      }
+
+      /* Form Fields */
+      .form-grid-3col {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .form-field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .form-label-custom {
+        font-size: 12px;
+        font-weight: 700;
+        color: #cbd5e1;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .input-styled {
         width: 100%;
-        padding: 10px 14px;
-        background: #0f172a !important;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 10px;
+        padding: 12px 16px;
+        background: #0b1324 !important;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
         color: #f8fafc !important;
         font-family: inherit;
         font-size: 14px;
@@ -174,85 +310,218 @@
         box-sizing: border-box;
         transition: all 0.2s ease;
       }
-      .input-field:focus {
+
+      .input-styled:focus {
         border-color: #6366f1;
         box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+        background: #0f172a !important;
       }
-      .input-field::placeholder {
+
+      .input-styled::placeholder {
         color: #64748b;
       }
+
       input:-webkit-autofill,
       input:-webkit-autofill:hover, 
       input:-webkit-autofill:focus, 
       input:-webkit-autofill:active {
-        -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
+        -webkit-box-shadow: 0 0 0 30px #0b1324 inset !important;
         -webkit-text-fill-color: #f8fafc !important;
         caret-color: #f8fafc !important;
       }
 
+      /* Table Styling */
+      .user-table-card-full {
+        background: var(--admin-bg-card);
+        border: 1px solid var(--admin-border);
+        border-radius: 20px;
+        overflow: hidden;
+        backdrop-filter: blur(16px);
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
+      }
 
+      .table-header-toolbar {
+        padding: 22px 28px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .table-responsive-box {
+        width: 100%;
+        overflow-x: auto;
+      }
+
+      table.modern-admin-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+      }
+
+      table.modern-admin-table th {
+        background: rgba(11, 19, 36, 0.85);
+        padding: 16px 24px;
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      table.modern-admin-table td {
+        padding: 18px 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        color: #e2e8f0;
+        vertical-align: middle;
+        font-size: 14px;
+      }
+
+      table.modern-admin-table tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .badge-role {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .badge-role.admin {
+        background: rgba(236, 72, 153, 0.15);
+        color: #f472b6;
+        border: 1px solid rgba(236, 72, 153, 0.35);
+      }
+
+      .badge-role.user {
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+        border: 1px solid rgba(59, 130, 246, 0.35);
+      }
+
+      .btn-act {
+        padding: 7px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 10px;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+      }
+
+      .btn-act-warn {
+        background: rgba(245, 158, 11, 0.18);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.35);
+      }
+
+      .btn-act-warn:hover {
+        background: #f59e0b;
+        color: #000000;
+      }
+
+      .btn-act-danger {
+        background: rgba(239, 68, 68, 0.18);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.35);
+      }
+
+      .btn-act-danger:hover {
+        background: #ef4444;
+        color: #ffffff;
+      }
+
+      @media (max-width: 900px) {
+        .kpi-row { grid-template-columns: 1fr; }
+        .ai-toggles-grid { grid-template-columns: 1fr; }
+        .form-grid-3col { grid-template-columns: 1fr; }
+      }
     </style>
   </head>
   <body>
-    <div class="app-container admin-container">
-      <!-- Admin Header -->
-      <div class="admin-header">
-        <div class="admin-title-area">
-          <div class="admin-icon">👥</div>
-          <div>
-            <h1 style="font-size: 22px; font-weight: 800; color: #fff; margin: 0;">Quản Lý Tài Khoản (Admin)</h1>
-            <p style="font-size: 13px; color: #94a3b8; margin: 4px 0 0 0;">Danh sách và quyền hạn tài khoản trong hệ thống Cert Word Sync</p>
+    <div class="admin-layout">
+      <!-- Admin Hero Header -->
+      <div class="admin-hero-banner">
+        <div class="admin-hero-title">
+          <div class="admin-hero-icon">👑</div>
+          <div class="admin-hero-heading">
+            <h1>Quản Lý Hệ Thống & Tài Khoản (Admin)</h1>
+            <p>Phân quyền người dùng, điều khiển cấu hình AI và bảo mật Cert Word Sync</p>
           </div>
         </div>
-        <a href="/" class="btn btn-secondary" style="border-radius: 20px; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+        <a href="/" class="btn-back-home">
           ← Quay lại Trang Chủ
         </a>
       </div>
 
       <!-- Messages & Alerts -->
       {% if msg %}
-      <div class="alert-banner alert-success" style="margin-bottom: 20px;">
-        <span>{{ msg }}</span>
+      <div class="alert-banner alert-success">
+        <span>✓ {{ msg }}</span>
       </div>
       {% endif %}
       {% if error %}
-      <div class="alert-banner alert-danger" style="margin-bottom: 20px;">
-        <span>{{ error }}</span>
+      <div class="alert-banner alert-danger">
+        <span>⚠️ {{ error }}</span>
       </div>
       {% endif %}
 
-      <!-- Overview Stats -->
-      <div class="stats-grid" style="margin-bottom: 25px;">
-        <div class="stat-card">
-          <div class="stat-icon emerald">👥</div>
-          <div class="stat-details">
-            <div class="value">{{ users|length }}</div>
-            <div class="label">Tổng số tài khoản</div>
+      <!-- KPI Overview Row -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-icon-wrapper emerald">👥</div>
+          <div>
+            <div class="kpi-val">{{ users|length }}</div>
+            <div class="label">Tổng tài khoản hệ thống</div>
           </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon">👑</div>
-          <div class="stat-details">
-            <div class="value">1</div>
-            <div class="label">Quản trị viên (chauvanhung1999@gmail.com)</div>
+        <div class="kpi-card">
+          <div class="kpi-icon-wrapper indigo">👑</div>
+          <div>
+            <div class="kpi-val">1</div>
+            <div class="label">Quản trị viên tối cao</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon-wrapper cyan">🤖</div>
+          <div>
+            <div class="kpi-val" style="font-size: 16px;">
+              {% if system_settings.enable_ai_extraction %}
+              <span style="color: #34d399;">⚡ AI Trích Xuất Bật</span>
+              {% else %}
+              <span style="color: #fbbf24;">⚙️ AI Trích Xuất Tắt</span>
+              {% endif %}
+            </div>
+            <div class="label">Trạng thái AI mặc định</div>
           </div>
         </div>
       </div>
 
-      <!-- Admin System Settings & Global AI Toggle -->
-      <div class="form-card" style="margin-bottom: 25px;">
-        <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin-top: 0; display: flex; align-items: center; gap: 8px;">
-          🤖 Cấu Hình Bật / Tắt AI Toàn Hệ Thống (Admin Control)
-        </h3>
-        <p style="font-size: 13px; color: #94a3b8; margin-bottom: 16px;">
-          Admin quy định toàn bộ hệ thống sử dụng AI hay chuyển sang chế độ trích xuất Regex thuần cho tất cả chứng từ mới.
-        </p>
+      <!-- Admin System Settings & Global AI Control Panel -->
+      <div class="panel-card">
+        <div class="panel-title">
+          <span>🤖 Cấu Hình Bật / Tắt AI Toàn Hệ Thống</span>
+        </div>
+        <div class="panel-desc">
+          Admin quy định toàn bộ hệ thống mặc định tự động kích hoạt AI hay chuyển sang chế độ Regex tĩnh cho tất cả chứng từ mới.
+        </div>
         <form action="/admin/settings" method="POST">
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
-            <div class="ai-toggle-box" style="margin: 0;">
-              <div>
-                <div style="font-size: 14px; font-weight: 700; color: #fff;">1. AI Trích xuất dữ liệu Chứng từ</div>
-                <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Áp dụng cho mọi yêu cầu tạo file từ chứng thư mới</div>
+          <div class="ai-toggles-grid">
+            <div class="ai-feature-box">
+              <div class="ai-feature-info">
+                <div class="ai-feature-name">1. AI Trích xuất dữ liệu Chứng từ</div>
+                <div class="ai-feature-hint">Tự động phân tích PDF/Ảnh chứng thư mới upload bằng LLM AI.</div>
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" name="enable_ai_extraction" value="1" {% if system_settings.enable_ai_extraction %}checked{% endif %}>
@@ -260,10 +529,10 @@
               </label>
             </div>
 
-            <div class="ai-toggle-box" style="margin: 0;">
-              <div>
-                <div style="font-size: 14px; font-weight: 700; color: #fff;">2. AI Học & phân tích mẫu Word mới</div>
-                <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Áp dụng khi tạo bộ form khách hàng mới</div>
+            <div class="ai-feature-box">
+              <div class="ai-feature-info">
+                <div class="ai-feature-name">2. AI Học & Phân tích mẫu Word mới</div>
+                <div class="ai-feature-hint">Tự động đọc cấu trúc placeholder khi tạo bộ form khách hàng mới.</div>
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" name="enable_ai_template_learning" value="1" {% if system_settings.enable_ai_template_learning %}checked{% endif %}>
@@ -271,51 +540,57 @@
               </label>
             </div>
           </div>
-          <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
-            <button type="submit" class="btn btn-primary" style="padding: 10px 24px;">
+          <div style="display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn btn-primary" style="padding: 12px 28px; border-radius: 12px;">
               💾 Lưu Cấu Hình AI Hệ Thống
             </button>
           </div>
         </form>
       </div>
 
-      <!-- Create New User Form -->
-      <div class="form-card" style="margin-bottom: 25px;">
-        <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin-top: 0; display: flex; align-items: center; gap: 8px;">
-          ➕ Thêm Tài Khoản Mới
-        </h3>
+      <!-- Create New User Panel -->
+      <div class="panel-card">
+        <div class="panel-title">
+          <span>➕ Thêm Tài Khoản Mới</span>
+        </div>
+        <div class="panel-desc">
+          Tạo tài khoản người dùng hoặc quản trị viên cấp dưới thủ công cho hệ thống.
+        </div>
         <form action="/admin/users/create" method="POST">
-          <div class="form-grid">
-            <div>
-              <label style="display: block; font-size: 12px; color: #94a3b8; margin-bottom: 6px;">Email *</label>
-              <input type="email" name="email" required placeholder="nhap_email@gmail.com" class="input-field">
+          <div class="form-grid-3col">
+            <div class="form-field-group">
+              <label class="form-label-custom">Email đăng nhập *</label>
+              <input type="email" name="email" required placeholder="nhap_email@gmail.com" class="input-styled">
             </div>
-            <div>
-              <label style="display: block; font-size: 12px; color: #94a3b8; margin-bottom: 6px;">Mật khẩu * (Tối thiểu 6 ký tự)</label>
-              <input type="password" name="password" required minlength="6" placeholder="••••••••" class="input-field">
+            <div class="form-field-group">
+              <label class="form-label-custom">Mật khẩu * (Tối thiểu 6 ký tự)</label>
+              <input type="password" name="password" required minlength="6" placeholder="••••••••" class="input-styled">
             </div>
-            <div>
-              <label style="display: block; font-size: 12px; color: #94a3b8; margin-bottom: 6px;">Họ và Tên</label>
-              <input type="text" name="full_name" placeholder="Nguyễn Văn A" class="input-field">
+            <div class="form-field-group">
+              <label class="form-label-custom">Họ và Tên</label>
+              <input type="text" name="full_name" placeholder="Nguyễn Văn A" class="input-styled">
             </div>
           </div>
-          <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
-            <button type="submit" class="btn btn-primary" style="padding: 10px 24px;">
-              Tạo tài khoản
+          <div style="display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn btn-primary" style="padding: 12px 28px; border-radius: 12px;">
+              ✨ Tạo Tài Khoản Nhanh
             </button>
           </div>
         </form>
       </div>
 
-
-      <!-- User List Table -->
-      <div class="user-table-card">
-        <div style="padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
-          <h3 style="margin: 0; color: #fff; font-size: 16px; font-weight: 700;">Danh Sách Người Dùng</h3>
-          <span style="font-size: 12px; color: #94a3b8;">Tổng cộng: {{ users|length }} tài khoản</span>
+      <!-- User List Table Card -->
+      <div class="user-table-card-full">
+        <div class="table-header-toolbar">
+          <div>
+            <h3 style="margin: 0; color: #ffffff; font-size: 17px; font-weight: 800;">Danh Sách Người Dùng Hệ Thống</h3>
+            <p style="margin: 4px 0 0 0; font-size: 13px; color: #94a3b8;">Quản lý quyền hạn và thông tin tài khoản người dùng</p>
+          </div>
+          <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">Tổng cộng: {{ users|length }} tài khoản</span>
         </div>
-        <div class="table-responsive">
-          <table class="admin-table">
+
+        <div class="table-responsive-box">
+          <table class="modern-admin-table">
             <thead>
               <tr>
                 <th>ID</th>
@@ -330,49 +605,47 @@
             <tbody>
               {% for u in users %}
               <tr>
-                <td>#{{ u.id }}</td>
+                <td style="font-weight: 700; color: #64748b;">#{{ u.id }}</td>
                 <td>
-                  <div style="display: flex; align-items: center; gap: 10px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
                     {% if u.avatar_url %}
-                    <img src="{{ u.avatar_url }}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                    <img src="{{ u.avatar_url }}" alt="Avatar" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.15);">
                     {% else %}
-                    <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--accent-indigo); color: #fff; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #a855f7); color: #fff; font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(99,102,241,0.3);">
                       {{ u.full_name[0]|upper if u.full_name else 'U' }}
                     </div>
                     {% endif %}
-                    <span style="font-weight: 600;">{{ u.full_name }}</span>
+                    <span style="font-weight: 700; color: #ffffff;">{{ u.full_name }}</span>
                   </div>
                 </td>
-                <td style="font-family: monospace; font-size: 13px;">{{ u.email }}</td>
+                <td style="font-family: monospace; font-size: 13px; color: #cbd5e1; word-break: break-all;">{{ u.email }}</td>
                 <td>
                   {% if u.google_id %}
-                  <span style="color: #60a5fa; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                  <span style="color: #60a5fa; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; background: rgba(59, 130, 246, 0.1); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.25);">
                     🌐 Google OAuth
                   </span>
                   {% else %}
-                  <span style="color: #94a3b8; font-size: 12px;">
-                    🔑 Email / Password
+                  <span style="color: #94a3b8; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.05); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                    🔑 Email / Mật khẩu
                   </span>
                   {% endif %}
                 </td>
                 <td>
                   {% if u.is_admin %}
-                  <span class="role-badge role-admin">👑 Admin</span>
+                  <span class="badge-role admin">👑 Admin</span>
                   {% else %}
-                  <span class="role-badge role-user">👤 User</span>
+                  <span class="badge-role user">👤 User</span>
                   {% endif %}
                 </td>
                 <td style="font-size: 12px; color: #94a3b8;">{{ u.created_at }}</td>
                 <td>
-                  <div class="action-btns" style="justify-content: flex-end;">
-                    <!-- Password Reset Button -->
-                    <button type="button" class="btn-sm btn-warning" onclick="toggleResetForm({{ u.id }})">
+                  <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn-act btn-act-warn" onclick="toggleResetForm({{ u.id }})">
                       🔑 Đổi MK
                     </button>
-                    <!-- Delete Button -->
                     {% if u.email != 'chauvanhung1999@gmail.com' and u.id != current_user.id %}
                     <form action="/admin/users/{{ u.id }}/delete" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa tài khoản {{ u.email }} không?');" style="display: inline;">
-                      <button type="submit" class="btn-sm btn-danger">
+                      <button type="submit" class="btn-act btn-act-danger">
                         🗑️ Xóa
                       </button>
                     </form>
@@ -380,11 +653,11 @@
                   </div>
 
                   <!-- Inline Reset Password Form -->
-                  <div id="reset-form-{{ u.id }}" style="display: none; margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                    <form action="/admin/users/{{ u.id }}/reset_password" method="POST" style="display: flex; gap: 8px;">
-                      <input type="password" name="new_password" required minlength="6" placeholder="Mật khẩu mới..." class="input-field" style="flex: 1; padding: 6px 10px; font-size: 12px;">
-                      <button type="submit" class="btn-sm btn-warning">Lưu</button>
-                      <button type="button" class="btn-sm btn-secondary" onclick="toggleResetForm({{ u.id }})">Hủy</button>
+                  <div id="reset-form-{{ u.id }}" style="display: none; margin-top: 12px; padding: 14px; background: rgba(11, 19, 36, 0.9); border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                    <form action="/admin/users/{{ u.id }}/reset_password" method="POST" style="display: flex; gap: 10px; align-items: center;">
+                      <input type="password" name="new_password" required minlength="6" placeholder="Nhập mật khẩu mới..." class="input-styled" style="flex: 1; padding: 8px 12px; font-size: 13px;">
+                      <button type="submit" class="btn-act btn-act-warn" style="padding: 8px 16px;">Lưu MK</button>
+                      <button type="button" class="btn btn-secondary" style="padding: 8px 14px; font-size: 12px;" onclick="toggleResetForm({{ u.id }})">Hủy</button>
                     </form>
                   </div>
                 </td>
